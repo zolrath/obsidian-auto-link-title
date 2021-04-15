@@ -22,7 +22,7 @@ export default class AutoLinkTitle extends Plugin {
     this.addSettingTab(new AutoLinkTitleSettingsTab(this.app, this));
     this.addCommand({
       id: "paste-url-with-title",
-      name: "",
+      name: "Paste and auto populate URL titles",
       callback: () => this.pasteUrlWithTitle(),
       hotkeys: [
         {

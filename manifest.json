@@ -5,6 +5,6 @@
 	"minAppVersion": "0.9.12",
 	"description": "This plugin automatically fetches the titles of links from the web",
 	"author": "Matt Furden",
-	"authorUrl": "https://obsidian.md/about",
+	"authorUrl": "https://github.com/zolrath",
 	"isDesktopOnly": false
 }
