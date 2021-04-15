@@ -1,10 +1,4 @@
-import {
-  App,
-  Modal,
-  Plugin,
-  PluginSettingTab,
-  Setting,
-} from "obsidian";
+import { App, Modal, Plugin, PluginSettingTab, Setting } from "obsidian";
 import { clipboard } from "electron";
 import * as CodeMirror from "codemirror";
 const https = require("https");
@@ -48,26 +42,25 @@ export default class AutoLinkTitle extends Plugin {
         editor.replaceSelection(`[${title}](${clipboardText})`);
       });
     } else {
-        editor.replaceSelection(clipboardText);
-	}
+      editor.replaceSelection(clipboardText);
+    }
   }
 
   fetchUrlTitle(text: string): Promise<string> {
-	console.log(`Fetching ${text} for title`)
-    var crossed = `https://api.allorigins.win/get?url=${encodeURIComponent(text)}`;
-	try {
+    console.log(`Fetching ${text} for title`);
+    var crossed = `https://api.allorigins.win/get?url=${encodeURIComponent(
+      text
+    )}`;
     return fetch(crossed)
       .then((response) => {
-		  return response.text()
-	  })
+        return response.text();
+      })
       .then((html) => {
         const doc = new DOMParser().parseFromString(html, "text/html");
         const title = doc.querySelectorAll("title")[0];
         return title.innerText;
-      });
-	} catch {
-		return new Promise(() => 'Title Unknown')
-	}
+      })
+      .catch((error) => "Title Unknown");
   }
 
   isUrl(text: string): boolean {
