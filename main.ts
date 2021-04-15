@@ -37,21 +37,36 @@ export default class AutoLinkTitle extends Plugin {
     let editor = this.getEditor();
     let clipboardText = clipboard.readText("clipboard");
 
-    if (clipboardText && this.isUrl(clipboardText)) {
-      this.fetchUrlTitle(clipboardText).then((title) => {
-        editor.replaceSelection(`[${title}](${clipboardText})`);
-      });
-    } else {
+    // If its not a URL, simply paste the text
+    if (clipboardText && !this.isUrl(clipboardText)) {
       editor.replaceSelection(clipboardText);
+      return;
     }
+
+    // Instantly paste so you don't wonder if paste is broken
+    let cursor = editor.getCursor();
+    editor.replaceSelection(`[Fetching Title](${clipboardText})`);
+
+    // Create marker so we can replace Fetching Title with actual title
+    let start = { line: cursor.line, ch: cursor.ch + 1 };
+    let end = { line: cursor.line, ch: cursor.ch + 15 };
+    let marker = editor.markText(start, end)
+
+    // Fetch title from site, replace Fetching Title with actual title
+    this.fetchUrlTitle(clipboardText).then((title) => {
+      var location = marker.find()
+      editor.replaceRange(title, location.from, location.to)
+    });
   }
 
   fetchUrlTitle(text: string): Promise<string> {
     console.log(`Fetching ${text} for title`);
-    var crossed = `https://api.allorigins.win/get?url=${encodeURIComponent(
+    // Because of CORS you can't fetch the site directly
+    var corsed = `https://api.allorigins.win/get?url=${encodeURIComponent(
       text
     )}`;
-    return fetch(crossed)
+
+    return fetch(corsed)
       .then((response) => {
         return response.text();
       })
