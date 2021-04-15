@@ -73,9 +73,17 @@ export default class AutoLinkTitle extends Plugin {
       .then((html) => {
         const doc = new DOMParser().parseFromString(html, "text/html");
         const title = doc.querySelectorAll("title")[0];
+        if (title == null || title.innerText.length == 0) {
+          // If site is javascript based and has a no-title attribute when unloaded, use it.
+          var notitle = title.getAttr("no-title")
+          if (notitle != null) return notitle
+
+          // Otherwise if the site has no title/requires javascript simply return Title Unknown
+          return "Title Unknown"
+        }
         return title.innerText;
       })
-      .catch((error) => "Title Unknown");
+      .catch((error) => "Site Unreachable");
   }
 
   isUrl(text: string): boolean {
