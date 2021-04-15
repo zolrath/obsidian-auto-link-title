@@ -1,10 +1,10 @@
 {
-	"id": "obsidian-sample-plugin",
-	"name": "Sample Plugin",
+	"id": "obsidian-auto-link-title",
+	"name": "Auto Link Title",
 	"version": "1.0.1",
 	"minAppVersion": "0.9.12",
-	"description": "This is a sample plugin for Obsidian. This plugin demonstrates some of the capabilities of the Obsidian API.",
-	"author": "Obsidian",
+	"description": "This plugin automatically fetches the titles of links from the web",
+	"author": "Matt Furden",
 	"authorUrl": "https://obsidian.md/about",
 	"isDesktopOnly": false
 }

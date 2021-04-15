@@ -1,112 +1,125 @@
-import { App, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import {
+  App,
+  Modal,
+  Plugin,
+  PluginSettingTab,
+  Setting,
+} from "obsidian";
+import { clipboard } from "electron";
+import * as CodeMirror from "codemirror";
+const https = require("https");
 
-interface MyPluginSettings {
-	mySetting: string;
+interface AutoLinkTitleSettings {
+  regex: string;
 }
 
-const DEFAULT_SETTINGS: MyPluginSettings = {
-	mySetting: 'default'
+const DEFAULT_SETTINGS: AutoLinkTitleSettings = {
+  regex:
+    "^(http:\\/\\/www\\.|https:\\/\\/www\\.|http:\\/\\/|https:\\/\\/)?[a-z0-9]+([\\-.]{1}[a-z0-9]+)*\\.[a-z]{2,5}(:[0-9]{1,5})?(\\/.*)?$",
+};
+
+export default class AutoLinkTitle extends Plugin {
+  settings: AutoLinkTitleSettings;
+
+  async onload() {
+    console.log("loading obsidian-auto-link-title");
+
+    await this.loadSettings();
+    this.addSettingTab(new AutoLinkTitleSettingsTab(this.app, this));
+    this.addCommand({
+      id: "paste-url-with-title",
+      name: "",
+      callback: () => this.pasteUrlWithTitle(),
+      hotkeys: [
+        {
+          modifiers: ["Mod", "Shift"],
+          key: "b",
+        },
+      ],
+    });
+  }
+
+  pasteUrlWithTitle(): void {
+    let editor = this.getEditor();
+    let clipboardText = clipboard.readText("clipboard");
+
+    if (clipboardText && this.isUrl(clipboardText)) {
+      this.fetchUrlTitle(clipboardText).then((title) => {
+        editor.replaceSelection(`[${title}](${clipboardText})`);
+      });
+    } else {
+        editor.replaceSelection(clipboardText);
+	}
+  }
+
+  fetchUrlTitle(text: string): Promise<string> {
+	console.log(`Fetching ${text} for title`)
+    var crossed = `https://api.allorigins.win/get?url=${encodeURIComponent(text)}`;
+	try {
+    return fetch(crossed)
+      .then((response) => {
+		  return response.text()
+	  })
+      .then((html) => {
+        const doc = new DOMParser().parseFromString(html, "text/html");
+        const title = doc.querySelectorAll("title")[0];
+        return title.innerText;
+      });
+	} catch {
+		return new Promise(() => 'Title Unknown')
+	}
+  }
+
+  isUrl(text: string): boolean {
+    let urlRegex = new RegExp(this.settings.regex);
+    return urlRegex.test(text);
+  }
+
+  private getEditor(): CodeMirror.Editor {
+    let activeLeaf: any = this.app.workspace.activeLeaf;
+    return activeLeaf.view.sourceMode.cmEditor;
+  }
+
+  onunload() {
+    console.log("unloading obsidian-auto-link-title");
+  }
+
+  async loadSettings() {
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+  }
+
+  async saveSettings() {
+    await this.saveData(this.settings);
+  }
 }
 
-export default class MyPlugin extends Plugin {
-	settings: MyPluginSettings;
+class AutoLinkTitleSettingsTab extends PluginSettingTab {
+  plugin: AutoLinkTitle;
 
-	async onload() {
-		console.log('loading plugin');
+  constructor(app: App, plugin: AutoLinkTitle) {
+    super(app, plugin);
+    this.plugin = plugin;
+  }
 
-		await this.loadSettings();
+  display(): void {
+    let { containerEl } = this;
 
-		this.addRibbonIcon('dice', 'Sample Plugin', () => {
-			new Notice('This is a notice!');
-		});
+    containerEl.empty();
 
-		this.addStatusBarItem().setText('Status Bar Text');
+    containerEl.createEl("h2", { text: "Settings for Auto Link Title." });
 
-		this.addCommand({
-			id: 'open-sample-modal',
-			name: 'Open Sample Modal',
-			// callback: () => {
-			// 	console.log('Simple Callback');
-			// },
-			checkCallback: (checking: boolean) => {
-				let leaf = this.app.workspace.activeLeaf;
-				if (leaf) {
-					if (!checking) {
-						new SampleModal(this.app).open();
-					}
-					return true;
-				}
-				return false;
-			}
-		});
-
-		this.addSettingTab(new SampleSettingTab(this.app, this));
-
-		this.registerCodeMirror((cm: CodeMirror.Editor) => {
-			console.log('codemirror', cm);
-		});
-
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			console.log('click', evt);
-		});
-
-		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
-	}
-
-	onunload() {
-		console.log('unloading plugin');
-	}
-
-	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-	}
-
-	async saveSettings() {
-		await this.saveData(this.settings);
-	}
-}
-
-class SampleModal extends Modal {
-	constructor(app: App) {
-		super(app);
-	}
-
-	onOpen() {
-		let {contentEl} = this;
-		contentEl.setText('Woah!');
-	}
-
-	onClose() {
-		let {contentEl} = this;
-		contentEl.empty();
-	}
-}
-
-class SampleSettingTab extends PluginSettingTab {
-	plugin: MyPlugin;
-
-	constructor(app: App, plugin: MyPlugin) {
-		super(app, plugin);
-		this.plugin = plugin;
-	}
-
-	display(): void {
-		let {containerEl} = this;
-
-		containerEl.empty();
-
-		containerEl.createEl('h2', {text: 'Settings for my awesome plugin.'});
-
-		new Setting(containerEl)
-			.setName('Setting #1')
-			.setDesc('It\'s a secret')
-			.addText(text => text
-				.setPlaceholder('Enter your secret')
-				.setValue('')
-				.onChange(async (value) => {
-					console.log('Secret: ' + value);
-					this.plugin.settings.mySetting = value;
-					await this.plugin.saveSettings();
-				}));
-	}
+    new Setting(containerEl)
+      .setName("URL Regex")
+      .setDesc("Regex used to detect links")
+      .addText((text) =>
+        text
+          .setPlaceholder(DEFAULT_SETTINGS.regex)
+          .setValue(DEFAULT_SETTINGS.regex)
+          .onChange(async (value) => {
+            console.log("Regex: " + value);
+            this.plugin.settings.regex = value;
+            await this.plugin.saveSettings();
+          })
+      );
+  }
 }
