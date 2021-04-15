@@ -56,6 +56,7 @@ export default class AutoLinkTitle extends Plugin {
     this.fetchUrlTitle(clipboardText).then((title) => {
       var location = marker.find()
       editor.replaceRange(title, location.from, location.to)
+      marker.clear()
     });
   }
 
