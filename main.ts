@@ -14,7 +14,7 @@ interface WordBoundaries {
 
 const DEFAULT_SETTINGS: AutoLinkTitleSettings = {
   regex: /^(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})$/,
-  linkRegex: /^\[([\w\s\d]+)\]\((https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})\)$/,
+  linkRegex: /^\[([\w\s\d~`!@#$%^&*(){};:"'<,.>?\/\\|_+=-]+)\]\((https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})\)$/,
 };
 
 export default class AutoLinkTitle extends Plugin {
@@ -51,10 +51,16 @@ export default class AutoLinkTitle extends Plugin {
 
   addTitleToLink(): void {
     let editor = this.getEditor();
-    let selectedText = (AutoLinkTitle.getSelectedText(editor) || '').trim();
+    let selectedText = (AutoLinkTitle.getSelectedText(editor) || "").trim();
 
+    // If the cursor is on a raw html link, convert to a markdown link and fetch title
     if (this.isUrl(selectedText)) {
-      this.convertUrlToTitledLink(selectedText)
+      this.convertUrlToTitledLink(selectedText);
+    }
+    // If the cursor is on the URL part of a markdown link, fetch title and replace existing link title
+    else if (this.isLinkedUrl(selectedText)) {
+      var link = this.getUrlFromLink(selectedText);
+      this.convertUrlToTitledLink(link);
     }
   }
 
@@ -68,27 +74,27 @@ export default class AutoLinkTitle extends Plugin {
       return;
     }
 
-    this.convertUrlToTitledLink(clipboardText)
+    this.convertUrlToTitledLink(clipboardText);
   }
 
   convertUrlToTitledLink(text: string): void {
     let editor = this.getEditor();
 
     // Instantly paste so you don't wonder if paste is broken
-    editor.replaceSelection("")
+    editor.replaceSelection("");
     let cursor = editor.getCursor();
     editor.replaceSelection(`[Fetching Title](${text})`);
 
     // Create marker so we can replace Fetching Title with actual title
     let start = { line: cursor.line, ch: cursor.ch + 1 };
     let end = { line: cursor.line, ch: cursor.ch + 15 };
-    let marker = editor.markText(start, end)
+    let marker = editor.markText(start, end);
 
     // Fetch title from site, replace Fetching Title with actual title
     this.fetchUrlTitle(text).then((title) => {
-      var location = marker.find()
-      editor.replaceRange(title, location.from, location.to)
-      marker.clear()
+      var location = marker.find();
+      editor.replaceRange(title, location.from, location.to);
+      marker.clear();
     });
   }
 
@@ -108,11 +114,11 @@ export default class AutoLinkTitle extends Plugin {
         const title = doc.querySelectorAll("title")[0];
         if (title == null || title.innerText.length == 0) {
           // If site is javascript based and has a no-title attribute when unloaded, use it.
-          var notitle = title.getAttr("no-title")
-          if (notitle != null) return notitle
+          var notitle = title.getAttr("no-title");
+          if (notitle != null) return notitle;
 
           // Otherwise if the site has no title/requires javascript simply return Title Unknown
-          return "Title Unknown"
+          return "Title Unknown";
         }
         return title.innerText;
       })
@@ -131,7 +137,7 @@ export default class AutoLinkTitle extends Plugin {
 
   getUrlFromLink(text: string): string {
     let urlRegex = new RegExp(this.settings.linkRegex);
-    return urlRegex.exec(text)[0];
+    return urlRegex.exec(text)[2];
   }
 
   private getEditor(): CodeMirror.Editor {
@@ -139,7 +145,7 @@ export default class AutoLinkTitle extends Plugin {
     return activeLeaf.view.sourceMode.cmEditor;
   }
 
-    private static getSelectedText(editor: CodeMirror.Editor): string {
+  private static getSelectedText(editor: CodeMirror.Editor): string {
     if (!editor.somethingSelected()) {
       let wordBoundaries = this.getWordBoundaries(editor);
       editor.getDoc().setSelection(wordBoundaries.start, wordBoundaries.end);
@@ -151,10 +157,51 @@ export default class AutoLinkTitle extends Plugin {
     let startCh, endCh: number;
     let cursor = editor.getCursor();
 
+    // If its a normal URL token this is not a markdown link
+    // In this case we can simply overwrite the link boundaries as-is
     if (editor.getTokenTypeAt(cursor) === "url") {
       let token = editor.getTokenAt(cursor);
       startCh = token.start;
       endCh = token.end;
+    }
+    // If it's a "string url" this likely means we're in a markdown link
+    // Check if this is true, then return the boundaries of the markdown link as a whole
+    else if (editor.getTokenTypeAt(cursor) === "string url") {
+      let token = editor.getTokenAt(cursor);
+      startCh = token.start;
+      endCh = token.end;
+
+      // Check if the characters before the url are ]( to indicate a markdown link
+      var titleEnd = editor.getRange(
+        { ch: token.start - 2, line: cursor.line },
+        { ch: token.start, line: cursor.line }
+      );
+
+      // Check if the character after the url is )
+      var linkEnd = editor.getRange(
+        { ch: token.end, line: cursor.line },
+        { ch: token.end + 2, line: cursor.line }
+      );
+
+      // If the link is a string url these *should* be true
+      if (titleEnd == "](" && linkEnd == ")") {
+        // Check back 400 characters to see if we've found the start of the link
+        // If we don't find a [ in that time, this is probably not a link
+        let beforeLink = editor.getRange(
+          { ch: token.start - 400, line: cursor.line },
+          { line: cursor.line, ch: token.start }
+        );
+
+        // Get the last [ in the text in case we've found multiple links in our lookback
+        var lastBrace = beforeLink.lastIndexOf("[");
+
+        // If we've found a brace, we're in a link!
+        if (lastBrace > -1) {
+          let bracePosition = beforeLink.length - lastBrace;
+          startCh = token.start - bracePosition;
+          endCh = token.end + 1;
+        }
+      }
     } else {
       let word = editor.findWordAt(cursor);
       startCh = word.anchor.ch;
