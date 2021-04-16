@@ -68,8 +68,13 @@ export default class AutoLinkTitle extends Plugin {
     let editor = this.getEditor();
     let clipboardText = clipboard.readText("clipboard");
 
+    if (!clipboardText) return;
+
     // If its not a URL, simply paste the text
-    if (clipboardText && !this.isUrl(clipboardText)) {
+    // If it looks like we're pasting the url into a markdown link already, don't fetch title
+    // as the user has already probably put a meaningful title, also it would lead to the title 
+    // being inside the link
+    if (!this.isUrl(clipboardText) || this.isMarkdownLinkAlready()) {
       editor.replaceSelection(clipboardText);
       return;
     }
@@ -81,7 +86,6 @@ export default class AutoLinkTitle extends Plugin {
     let editor = this.getEditor();
 
     // Instantly paste so you don't wonder if paste is broken
-    editor.replaceSelection("");
     let cursor = editor.getCursor();
     editor.replaceSelection(`[Fetching Title](${text})`);
 
@@ -123,6 +127,19 @@ export default class AutoLinkTitle extends Plugin {
         return title.innerText;
       })
       .catch((error) => "Site Unreachable");
+  }
+
+  isMarkdownLinkAlready(): boolean {
+    let editor = this.getEditor();
+    let cursor = editor.getCursor();
+
+      // Check if the characters before the url are ]( to indicate a markdown link
+      var titleEnd = editor.getRange(
+        { ch: cursor.ch - 2, line: cursor.line },
+        { ch: cursor.ch, line: cursor.line }
+      );
+
+      return titleEnd == "]("
   }
 
   isUrl(text: string): boolean {
