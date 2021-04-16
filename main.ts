@@ -1,15 +1,20 @@
 import { App, Modal, Plugin, PluginSettingTab, Setting } from "obsidian";
 import { clipboard } from "electron";
 import * as CodeMirror from "codemirror";
-const https = require("https");
 
 interface AutoLinkTitleSettings {
-  regex: string;
+  regex: RegExp;
+  linkRegex: RegExp;
+}
+
+interface WordBoundaries {
+  start: { line: number; ch: number };
+  end: { line: number; ch: number };
 }
 
 const DEFAULT_SETTINGS: AutoLinkTitleSettings = {
-  regex:
-    "^(http:\\/\\/www\\.|https:\\/\\/www\\.|http:\\/\\/|https:\\/\\/)?[a-z0-9]+([\\-.]{1}[a-z0-9]+)*\\.[a-z]{2,5}(:[0-9]{1,5})?(\\/.*)?$",
+  regex: /^(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})$/,
+  linkRegex: /^\[([\w\s\d]+)\]\((https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})\)$/,
 };
 
 export default class AutoLinkTitle extends Plugin {
@@ -19,7 +24,7 @@ export default class AutoLinkTitle extends Plugin {
     console.log("loading obsidian-auto-link-title");
 
     await this.loadSettings();
-    this.addSettingTab(new AutoLinkTitleSettingsTab(this.app, this));
+    // this.addSettingTab(new AutoLinkTitleSettingsTab(this.app, this));
     this.addCommand({
       id: "paste-url-with-title",
       name: "Paste and auto populate URL titles",
@@ -31,6 +36,26 @@ export default class AutoLinkTitle extends Plugin {
         },
       ],
     });
+    this.addCommand({
+      id: "enhance-url-with-title",
+      name: "Enhance existing URL with link and title",
+      callback: () => this.addTitleToLink(),
+      hotkeys: [
+        {
+          modifiers: ["Mod", "Shift"],
+          key: "e",
+        },
+      ],
+    });
+  }
+
+  addTitleToLink(): void {
+    let editor = this.getEditor();
+    let selectedText = (AutoLinkTitle.getSelectedText(editor) || '').trim();
+
+    if (this.isUrl(selectedText)) {
+      this.convertUrlToTitledLink(selectedText)
+    }
   }
 
   pasteUrlWithTitle(): void {
@@ -43,9 +68,16 @@ export default class AutoLinkTitle extends Plugin {
       return;
     }
 
+    this.convertUrlToTitledLink(clipboardText)
+  }
+
+  convertUrlToTitledLink(text: string): void {
+    let editor = this.getEditor();
+
     // Instantly paste so you don't wonder if paste is broken
+    editor.replaceSelection("")
     let cursor = editor.getCursor();
-    editor.replaceSelection(`[Fetching Title](${clipboardText})`);
+    editor.replaceSelection(`[Fetching Title](${text})`);
 
     // Create marker so we can replace Fetching Title with actual title
     let start = { line: cursor.line, ch: cursor.ch + 1 };
@@ -53,7 +85,7 @@ export default class AutoLinkTitle extends Plugin {
     let marker = editor.markText(start, end)
 
     // Fetch title from site, replace Fetching Title with actual title
-    this.fetchUrlTitle(clipboardText).then((title) => {
+    this.fetchUrlTitle(text).then((title) => {
       var location = marker.find()
       editor.replaceRange(title, location.from, location.to)
       marker.clear()
@@ -92,9 +124,47 @@ export default class AutoLinkTitle extends Plugin {
     return urlRegex.test(text);
   }
 
+  isLinkedUrl(text: string): boolean {
+    let urlRegex = new RegExp(this.settings.linkRegex);
+    return urlRegex.test(text);
+  }
+
+  getUrlFromLink(text: string): string {
+    let urlRegex = new RegExp(this.settings.linkRegex);
+    return urlRegex.exec(text)[0];
+  }
+
   private getEditor(): CodeMirror.Editor {
     let activeLeaf: any = this.app.workspace.activeLeaf;
     return activeLeaf.view.sourceMode.cmEditor;
+  }
+
+    private static getSelectedText(editor: CodeMirror.Editor): string {
+    if (!editor.somethingSelected()) {
+      let wordBoundaries = this.getWordBoundaries(editor);
+      editor.getDoc().setSelection(wordBoundaries.start, wordBoundaries.end);
+    }
+    return editor.getSelection();
+  }
+
+  private static getWordBoundaries(editor: CodeMirror.Editor): WordBoundaries {
+    let startCh, endCh: number;
+    let cursor = editor.getCursor();
+
+    if (editor.getTokenTypeAt(cursor) === "url") {
+      let token = editor.getTokenAt(cursor);
+      startCh = token.start;
+      endCh = token.end;
+    } else {
+      let word = editor.findWordAt(cursor);
+      startCh = word.anchor.ch;
+      endCh = word.head.ch;
+    }
+
+    return {
+      start: { line: cursor.line, ch: startCh },
+      end: { line: cursor.line, ch: endCh },
+    };
   }
 
   onunload() {
@@ -110,33 +180,33 @@ export default class AutoLinkTitle extends Plugin {
   }
 }
 
-class AutoLinkTitleSettingsTab extends PluginSettingTab {
-  plugin: AutoLinkTitle;
+// class AutoLinkTitleSettingsTab extends PluginSettingTab {
+//   plugin: AutoLinkTitle;
 
-  constructor(app: App, plugin: AutoLinkTitle) {
-    super(app, plugin);
-    this.plugin = plugin;
-  }
+//   constructor(app: App, plugin: AutoLinkTitle) {
+//     super(app, plugin);
+//     this.plugin = plugin;
+//   }
 
-  display(): void {
-    let { containerEl } = this;
+//   display(): void {
+//     let { containerEl } = this;
 
-    containerEl.empty();
+//     containerEl.empty();
 
-    containerEl.createEl("h2", { text: "Settings for Auto Link Title." });
+//     containerEl.createEl("h2", { text: "Settings for Auto Link Title." });
 
-    new Setting(containerEl)
-      .setName("URL Regex")
-      .setDesc("Regex used to detect links")
-      .addText((text) =>
-        text
-          .setPlaceholder(DEFAULT_SETTINGS.regex)
-          .setValue(DEFAULT_SETTINGS.regex)
-          .onChange(async (value) => {
-            console.log("Regex: " + value);
-            this.plugin.settings.regex = value;
-            await this.plugin.saveSettings();
-          })
-      );
-  }
-}
+//     new Setting(containerEl)
+//       .setName("URL Regex")
+//       .setDesc("Regex used to detect links")
+//       .addText((text) =>
+//         text
+//           .setPlaceholder(DEFAULT_SETTINGS.regex)
+//           .setValue(DEFAULT_SETTINGS.regex)
+//           .onChange(async (value) => {
+//             console.log("Regex: " + value);
+//             this.plugin.settings.regex = value;
+//             await this.plugin.saveSettings();
+//           })
+//       );
+//   }
+// }
