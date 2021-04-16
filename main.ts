@@ -85,6 +85,8 @@ export default class AutoLinkTitle extends Plugin {
   convertUrlToTitledLink(text: string): void {
     let editor = this.getEditor();
 
+    // Remove the existing link to reset the cursor position
+    editor.replaceSelection("");
     // Instantly paste so you don't wonder if paste is broken
     let cursor = editor.getCursor();
     editor.replaceSelection(`[Fetching Title](${text})`);
