@@ -76,16 +76,19 @@ export default class AutoLinkTitle extends Plugin {
     // If its not a URL, we return false to allow the default paste handler to take care of it.
     // Similarly, image urls don't have a meaningful <title> attribute so downloading it
     // to fetch the title is a waste of bandwidth.
-    // If it looks like we're pasting the url into a markdown link already, don't fetch title
-    // as the user has already probably put a meaningful title, also it would lead to the title 
-    // being inside the link.
-    //
-    if (!this.isUrl(clipboardText) ||
-         this.isImage(clipboardText) ||
-         this.isMarkdownLinkAlready()) {
+    if (!this.isUrl(clipboardText) || this.isImage(clipboardText)) {
       return false;
     }
 
+    // If it looks like we're pasting the url into a markdown link already, don't fetch title
+    // as the user has already probably put a meaningful title, also it would lead to the title 
+    // being inside the link.
+    if (this.isMarkdownLinkAlready()) {
+      editor.replaceSelection(clipboardText);
+      return true;
+    }
+
+    // At this point we're just pasting a link in a normal fashion.
     this.convertUrlToTitledLink(clipboardText);
     return true;
   }
