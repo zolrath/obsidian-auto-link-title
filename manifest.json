@@ -6,5 +6,5 @@
 	"description": "This plugin automatically fetches the titles of links from the web",
 	"author": "Matt Furden",
 	"authorUrl": "https://github.com/zolrath",
-	"isDesktopOnly": false
+	"isDesktopOnly": true
 }
