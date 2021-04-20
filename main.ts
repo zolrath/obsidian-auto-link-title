@@ -28,7 +28,7 @@ export default class AutoLinkTitle extends Plugin {
     this.addCommand({
       id: "paste-url-with-title",
       name: "Paste and auto populate URL titles",
-      callback: () => this.pasteUrlWithTitle(),
+      checkCallback: () => this.pasteUrlWithTitle(),
       hotkeys: [
         {
           modifiers: ["Mod"],
@@ -64,7 +64,7 @@ export default class AutoLinkTitle extends Plugin {
     }
   }
 
-  pasteUrlWithTitle(): Boolean {
+  pasteUrlWithTitle(): boolean {
     let editor = this.getEditor();
     let clipboardText = clipboard.readText("clipboard");
 
