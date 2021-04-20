@@ -1,4 +1,4 @@
-import { App, Modal, Plugin, PluginSettingTab, Setting } from "obsidian";
+import { App, Modal, Plugin, PluginSettingTab, Setting, MarkdownView } from "obsidian";
 import { clipboard } from "electron";
 import * as CodeMirror from "codemirror";
 
@@ -51,6 +51,8 @@ export default class AutoLinkTitle extends Plugin {
 
   addTitleToLink(): void {
     let editor = this.getEditor();
+    if (editor == null) return;
+
     let selectedText = (AutoLinkTitle.getSelectedText(editor) || "").trim();
 
     // If the cursor is on a raw html link, convert to a markdown link and fetch title
@@ -68,7 +70,7 @@ export default class AutoLinkTitle extends Plugin {
     let editor = this.getEditor();
     let clipboardText = clipboard.readText("clipboard");
 
-    if (!clipboardText) return false;
+    if (!clipboardText || editor == null) return false;
 
     // If its not a URL, simply paste the text
     // If it looks like we're pasting the url into a markdown link already, don't fetch title
@@ -84,6 +86,7 @@ export default class AutoLinkTitle extends Plugin {
 
   convertUrlToTitledLink(text: string): void {
     let editor = this.getEditor();
+    if (editor == null) return;
 
     // Remove the existing link to reset the cursor position
     editor.replaceSelection("");
@@ -105,34 +108,36 @@ export default class AutoLinkTitle extends Plugin {
   }
 
   fetchUrlTitle(text: string): Promise<string> {
-    console.log(`Fetching ${text} for title`);
+    // console.log(`Fetching ${text} for title`);
     // Because of CORS you can't fetch the site directly
     var corsed = `https://api.allorigins.win/get?url=${encodeURIComponent(
       text
     )}`;
 
     return fetch(corsed)
-      .then((response) => {
+      .then(response => {
         return response.text();
       })
-      .then((html) => {
+      .then(html => {
         const doc = new DOMParser().parseFromString(html, "text/html");
         const title = doc.querySelectorAll("title")[0];
         if (title == null || title.innerText.length == 0) {
           // If site is javascript based and has a no-title attribute when unloaded, use it.
-          var notitle = title.getAttr("no-title");
-          if (notitle != null) return notitle;
+          var noTitle = title.getAttr("no-title");
+          if (noTitle != null) return noTitle;
 
           // Otherwise if the site has no title/requires javascript simply return Title Unknown
           return "Title Unknown";
         }
         return title.innerText;
       })
-      .catch((error) => "Site Unreachable");
+      .catch(error => "Site Unreachable");
   }
 
   isMarkdownLinkAlready(): boolean {
     let editor = this.getEditor();
+    if (editor == null) return false;
+
     let cursor = editor.getCursor();
 
       // Check if the characters before the url are ]( to indicate a markdown link
@@ -160,8 +165,10 @@ export default class AutoLinkTitle extends Plugin {
   }
 
   private getEditor(): CodeMirror.Editor {
-    let activeLeaf: any = this.app.workspace.activeLeaf;
-    return activeLeaf.view.sourceMode.cmEditor;
+    let activeLeaf = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (activeLeaf == null) return;
+    // Continue to use cmEditor for now until Editor gains Marker and Token capabilities
+    return activeLeaf.sourceMode.cmEditor;
   }
 
   private static getSelectedText(editor: CodeMirror.Editor): string {
