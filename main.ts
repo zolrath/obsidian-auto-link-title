@@ -31,8 +31,8 @@ export default class AutoLinkTitle extends Plugin {
       callback: () => this.pasteUrlWithTitle(),
       hotkeys: [
         {
-          modifiers: ["Mod", "Shift"],
-          key: "b",
+          modifiers: ["Mod"],
+          key: "v",
         },
       ],
     });
@@ -64,22 +64,22 @@ export default class AutoLinkTitle extends Plugin {
     }
   }
 
-  pasteUrlWithTitle(): void {
+  pasteUrlWithTitle(): Boolean {
     let editor = this.getEditor();
     let clipboardText = clipboard.readText("clipboard");
 
-    if (!clipboardText) return;
+    if (!clipboardText) return false;
 
     // If its not a URL, simply paste the text
     // If it looks like we're pasting the url into a markdown link already, don't fetch title
     // as the user has already probably put a meaningful title, also it would lead to the title 
     // being inside the link
     if (!this.isUrl(clipboardText) || this.isMarkdownLinkAlready()) {
-      editor.replaceSelection(clipboardText);
-      return;
+      return false;
     }
 
     this.convertUrlToTitledLink(clipboardText);
+    return true;
   }
 
   convertUrlToTitledLink(text: string): void {
