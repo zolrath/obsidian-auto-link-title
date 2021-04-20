@@ -1,10 +1,10 @@
-import { App, Modal, Plugin, PluginSettingTab, Setting, MarkdownView } from "obsidian";
-import { clipboard } from "electron";
+import { Plugin, MarkdownView } from "obsidian";
 import * as CodeMirror from "codemirror";
 
 interface AutoLinkTitleSettings {
   regex: RegExp;
   linkRegex: RegExp;
+  imageRegex: RegExp;
 }
 
 interface WordBoundaries {
@@ -13,8 +13,9 @@ interface WordBoundaries {
 }
 
 const DEFAULT_SETTINGS: AutoLinkTitleSettings = {
-  regex: /^(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})$/,
-  linkRegex: /^\[([^\[\]]*)\]\((https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})\)$/
+  regex: /^(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})$/i,
+  linkRegex: /^\[([^\[\]]*)\]\((https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})\)$/i,
+  imageRegex: /\.(gif|jpe?g|tiff?|png|webp|bmp|tga|psd|ai)/i
 };
 
 export default class AutoLinkTitle extends Plugin {
@@ -68,15 +69,20 @@ export default class AutoLinkTitle extends Plugin {
 
   pasteUrlWithTitle(): boolean {
     let editor = this.getEditor();
-    let clipboardText = clipboard.readText("clipboard");
+    let clipboardText = window.require("electron").clipboard.readText("clipboard");
 
     if (!clipboardText || editor == null) return false;
 
-    // If its not a URL, simply paste the text
+    // If its not a URL, we return false to allow the default paste handler to take care of it.
+    // Similarly, image urls don't have a meaningful <title> attribute so downloading it
+    // to fetch the title is a waste of bandwidth.
     // If it looks like we're pasting the url into a markdown link already, don't fetch title
     // as the user has already probably put a meaningful title, also it would lead to the title 
-    // being inside the link
-    if (!this.isUrl(clipboardText) || this.isMarkdownLinkAlready()) {
+    // being inside the link.
+    //
+    if (!this.isUrl(clipboardText) ||
+         this.isImage(clipboardText) ||
+         this.isMarkdownLinkAlready()) {
       return false;
     }
 
@@ -152,6 +158,11 @@ export default class AutoLinkTitle extends Plugin {
   isUrl(text: string): boolean {
     let urlRegex = new RegExp(this.settings.regex);
     return urlRegex.test(text);
+  }
+
+  isImage(text: string): boolean {
+    let imageRegex = new RegExp(this.settings.imageRegex);
+    return imageRegex.test(text);
   }
 
   isLinkedUrl(text: string): boolean {
