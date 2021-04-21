@@ -1,5 +1,6 @@
 import { Plugin, MarkdownView } from "obsidian";
 import * as CodeMirror from "codemirror";
+import { resourceUsage } from "node:process";
 
 interface AutoLinkTitleSettings {
   regex: RegExp;
@@ -20,26 +21,16 @@ const DEFAULT_SETTINGS: AutoLinkTitleSettings = {
 
 export default class AutoLinkTitle extends Plugin {
   settings: AutoLinkTitleSettings;
+  pasteFunction: any;
 
   async onload() {
     console.log("loading obsidian-auto-link-title");
-
-    let editor = this.getEditor();
-    editor.on("paste", this.mobilePasteUrlWithTitle);
-
     await this.loadSettings();
-    // this.addSettingTab(new AutoLinkTitleSettingsTab(this.app, this));
-    this.addCommand({
-      id: "paste-url-with-title",
-      name: "Paste and auto populate URL titles",
-      checkCallback: () => this.desktopPasteUrlWithTitle(),
-      hotkeys: [
-        {
-          modifiers: ["Mod"],
-          key: "v",
-        },
-      ],
-    });
+
+    // Listen to paste event
+    this.pasteFunction = this.pasteUrlWithTitle.bind(this)
+    this.app.workspace.containerEl.addEventListener("paste", this.pasteFunction, true);
+
     this.addCommand({
       id: "enhance-url-with-title",
       name: "Enhance existing URL with link and title",
@@ -70,40 +61,32 @@ export default class AutoLinkTitle extends Plugin {
     }
   }
 
-  mobilePasteUrlWithTitle(editor: CodeMirror.Editor, clipboard: ClipboardEvent): boolean {
-    let clipboardText = clipboard.clipboardData.getData('text/plain');
-    if (!clipboardText) return false;
-
-    return this.pasteUrlWithTitle(editor, clipboardText);
-  }
-
-  desktopPasteUrlWithTitle(): boolean {
+  pasteUrlWithTitle(clipboard: ClipboardEvent): void {
     let editor = this.getEditor();
-    let clipboardText = window.require("electron").clipboard.readText("clipboard");
-    if (!clipboardText || editor == null) return false;
+    let clipboardText = clipboard.clipboardData.getData('text/plain');
+    if (clipboardText == null || clipboardText == "") return;
 
-    return this.pasteUrlWithTitle(editor, clipboardText);
-  }
-
-  pasteUrlWithTitle(editor: CodeMirror.Editor, clipboardText: string): boolean {
     // If its not a URL, we return false to allow the default paste handler to take care of it.
     // Similarly, image urls don't have a meaningful <title> attribute so downloading it
     // to fetch the title is a waste of bandwidth.
     if (!this.isUrl(clipboardText) || this.isImage(clipboardText)) {
-      return false;
+      return;
     }
+
+    clipboard.stopPropagation();
+    clipboard.preventDefault();
 
     // If it looks like we're pasting the url into a markdown link already, don't fetch title
     // as the user has already probably put a meaningful title, also it would lead to the title 
     // being inside the link.
     if (this.isMarkdownLinkAlready(editor)) {
       editor.replaceSelection(clipboardText);
-      return true;
+      return;
     }
 
-    // At this point we're just pasting a link in a normal fashion.
+    // At this point we're just pasting a link in a normal fashion, fetch its title.
     this.convertUrlToTitledLink(editor, clipboardText);
-    return true;
+    return;
   }
 
   convertUrlToTitledLink(editor: CodeMirror.Editor, text: string): void {
@@ -263,6 +246,7 @@ export default class AutoLinkTitle extends Plugin {
 
   onunload() {
     console.log("unloading obsidian-auto-link-title");
+    this.app.workspace.containerEl.removeEventListener("paste", this.pasteFunction, true);
   }
 
   async loadSettings() {
