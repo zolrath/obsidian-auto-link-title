@@ -1,6 +1,5 @@
 import { Plugin, MarkdownView } from "obsidian";
 import * as CodeMirror from "codemirror";
-import { resourceUsage } from "node:process";
 
 interface AutoLinkTitleSettings {
   regex: RegExp;
@@ -13,15 +12,20 @@ interface WordBoundaries {
   end: { line: number; ch: number };
 }
 
+interface PasteFunction {
+  (this: HTMLElement, ev: ClipboardEvent): void;
+}
+
 const DEFAULT_SETTINGS: AutoLinkTitleSettings = {
   regex: /^(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})$/i,
   linkRegex: /^\[([^\[\]]*)\]\((https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})\)$/i,
   imageRegex: /\.(gif|jpe?g|tiff?|png|webp|bmp|tga|psd|ai)/i
 };
 
+
 export default class AutoLinkTitle extends Plugin {
   settings: AutoLinkTitleSettings;
-  pasteFunction: any;
+  pasteFunction: PasteFunction;
 
   async onload() {
     console.log("loading obsidian-auto-link-title");
