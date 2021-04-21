@@ -49,6 +49,9 @@ export default class AutoLinkTitle extends Plugin {
   }
 
   addTitleToLink(): void {
+    // Only attempt fetch if online
+    if (!navigator.onLine) return;
+
     let editor = this.getEditor();
     if (editor == null) return;
 
@@ -66,6 +69,9 @@ export default class AutoLinkTitle extends Plugin {
   }
 
   pasteUrlWithTitle(clipboard: ClipboardEvent): void {
+    // Only attempt fetch if online
+    if (!navigator.onLine) return;
+    
     let editor = this.getEditor();
     let clipboardText = clipboard.clipboardData.getData('text/plain');
     if (clipboardText == null || clipboardText == "") return;
