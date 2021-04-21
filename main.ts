@@ -1,5 +1,6 @@
 import { EditorExtensions } from "editor-enhancements";
 import { Plugin, MarkdownView, Editor } from "obsidian";
+import { nanoid } from "nanoid";
 
 interface AutoLinkTitleSettings {
   regex: RegExp;
@@ -89,6 +90,9 @@ export default class AutoLinkTitle extends Plugin {
   }
 
   convertUrlToTitledLink(editor: Editor, text: string): void {
+    // Generate a unique id for find/replace operations for the title.
+    let pasteId = nanoid(5);
+
     // Remove the existing link to reset the cursor position
     editor.replaceSelection("");
     // Instantly paste so you don't wonder if paste is broken
