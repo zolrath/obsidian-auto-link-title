@@ -24,12 +24,15 @@ export default class AutoLinkTitle extends Plugin {
   async onload() {
     console.log("loading obsidian-auto-link-title");
 
+    let editor = this.getEditor();
+    editor.on("paste", this.mobilePasteUrlWithTitle);
+
     await this.loadSettings();
     // this.addSettingTab(new AutoLinkTitleSettingsTab(this.app, this));
     this.addCommand({
       id: "paste-url-with-title",
       name: "Paste and auto populate URL titles",
-      checkCallback: () => this.pasteUrlWithTitle(),
+      checkCallback: () => this.desktopPasteUrlWithTitle(),
       hotkeys: [
         {
           modifiers: ["Mod"],
@@ -58,21 +61,31 @@ export default class AutoLinkTitle extends Plugin {
 
     // If the cursor is on a raw html link, convert to a markdown link and fetch title
     if (this.isUrl(selectedText)) {
-      this.convertUrlToTitledLink(selectedText);
+      this.convertUrlToTitledLink(editor, selectedText);
     }
     // If the cursor is on the URL part of a markdown link, fetch title and replace existing link title
     else if (this.isLinkedUrl(selectedText)) {
       var link = this.getUrlFromLink(selectedText);
-      this.convertUrlToTitledLink(link);
+      this.convertUrlToTitledLink(editor, link);
     }
   }
 
-  pasteUrlWithTitle(): boolean {
+  mobilePasteUrlWithTitle(editor: CodeMirror.Editor, clipboard: ClipboardEvent): boolean {
+    let clipboardText = clipboard.clipboardData.getData('text/plain');
+    if (!clipboardText) return false;
+
+    return this.pasteUrlWithTitle(editor, clipboardText);
+  }
+
+  desktopPasteUrlWithTitle(): boolean {
     let editor = this.getEditor();
     let clipboardText = window.require("electron").clipboard.readText("clipboard");
-
     if (!clipboardText || editor == null) return false;
 
+    return this.pasteUrlWithTitle(editor, clipboardText);
+  }
+
+  pasteUrlWithTitle(editor: CodeMirror.Editor, clipboardText: string): boolean {
     // If its not a URL, we return false to allow the default paste handler to take care of it.
     // Similarly, image urls don't have a meaningful <title> attribute so downloading it
     // to fetch the title is a waste of bandwidth.
@@ -83,20 +96,17 @@ export default class AutoLinkTitle extends Plugin {
     // If it looks like we're pasting the url into a markdown link already, don't fetch title
     // as the user has already probably put a meaningful title, also it would lead to the title 
     // being inside the link.
-    if (this.isMarkdownLinkAlready()) {
+    if (this.isMarkdownLinkAlready(editor)) {
       editor.replaceSelection(clipboardText);
       return true;
     }
 
     // At this point we're just pasting a link in a normal fashion.
-    this.convertUrlToTitledLink(clipboardText);
+    this.convertUrlToTitledLink(editor, clipboardText);
     return true;
   }
 
-  convertUrlToTitledLink(text: string): void {
-    let editor = this.getEditor();
-    if (editor == null) return;
-
+  convertUrlToTitledLink(editor: CodeMirror.Editor, text: string): void {
     // Remove the existing link to reset the cursor position
     editor.replaceSelection("");
     // Instantly paste so you don't wonder if paste is broken
@@ -143,10 +153,7 @@ export default class AutoLinkTitle extends Plugin {
       .catch(error => "Site Unreachable");
   }
 
-  isMarkdownLinkAlready(): boolean {
-    let editor = this.getEditor();
-    if (editor == null) return false;
-
+  isMarkdownLinkAlready(editor: CodeMirror.Editor): boolean {
     let cursor = editor.getCursor();
 
       // Check if the characters before the url are ]( to indicate a markdown link
