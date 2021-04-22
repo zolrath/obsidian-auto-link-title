@@ -1,4 +1,5 @@
-import {Editor} from 'obsidian';
+import {Editor, EditorPosition} from 'obsidian';
+import {DEFAULT_SETTINGS} from 'settings';
 
 interface WordBoundaries {
   start: { line: number; ch: number };
@@ -9,9 +10,16 @@ export class EditorExtensions {
   public static getSelectedText(editor: Editor): string {
     if (!editor.somethingSelected()) {
       let wordBoundaries = this.getWordBoundaries(editor);
-      editor.getDoc().setSelection(wordBoundaries.start, wordBoundaries.end);
+      editor.setSelection(wordBoundaries.start, wordBoundaries.end);
     }
     return editor.getSelection();
+  }
+
+  private static cursorWithinBoundaries(cursor: EditorPosition, match: RegExpMatchArray): boolean {
+    let startIndex = match.index;
+    let endIndex = match.index + match[0].length;
+
+    return startIndex <= cursor.ch && cursor.ch <= endIndex;
   }
 
   private static getWordBoundaries(editor: Editor): WordBoundaries {
@@ -20,58 +28,52 @@ export class EditorExtensions {
 
     // If its a normal URL token this is not a markdown link
     // In this case we can simply overwrite the link boundaries as-is
-    if (editor.getTokenTypeAt(cursor) === "url") {
-      let token = editor.getTokenAt(cursor);
-      startCh = token.start;
-      endCh = token.end;
-    }
-    // If it's a "string url" this likely means we're in a markdown link
-    // Check if this is true, then return the boundaries of the markdown link as a whole
-    else if (editor.getTokenTypeAt(cursor) === "string url") {
-      let token = editor.getTokenAt(cursor);
-      startCh = token.start;
-      endCh = token.end;
+    let lineText = editor.getLine(cursor.line);
 
-      // Check if the characters before the url are ]( to indicate a markdown link
-      var titleEnd = editor.getRange(
-        { ch: token.start - 2, line: cursor.line },
-        { ch: token.start, line: cursor.line }
-      );
+    // First check if we're in a link
+    let linksInLine = lineText.matchAll(DEFAULT_SETTINGS.linkLineRegex);
 
-      // Check if the character after the url is )
-      var linkEnd = editor.getRange(
-        { ch: token.end, line: cursor.line },
-        { ch: token.end + 2, line: cursor.line }
-      );
-
-      // If the link is a string url these *should* be true
-      if (titleEnd == "](" && linkEnd == ")") {
-        // Check back 400 characters to see if we've found the start of the link
-        // If we don't find a [ in that time, this is probably not a link
-        let beforeLink = editor.getRange(
-          { ch: token.start - 400, line: cursor.line },
-          { line: cursor.line, ch: token.start }
-        );
-
-        // Get the last [ in the text in case we've found multiple links in our lookback
-        var lastBrace = beforeLink.lastIndexOf("[");
-
-        // If we've found a brace, we're in a link!
-        if (lastBrace > -1) {
-          let bracePosition = beforeLink.length - lastBrace;
-          startCh = token.start - bracePosition;
-          endCh = token.end + 1;
-        }
+    for (let match of linksInLine) {
+      if (this.cursorWithinBoundaries(cursor, match)) {
+        return {
+          start: { line: cursor.line, ch: match.index },
+          end: { line: cursor.line, ch: match.index + match[0].length },
+        };
       }
-    } else {
-      let word = editor.findWordAt(cursor);
-      startCh = word.anchor.ch;
-      endCh = word.head.ch;
+    }
+
+    // If not, check if we're in just a standard ol' URL.
+    let urlsInLine = lineText.matchAll(DEFAULT_SETTINGS.lineRegex);
+
+    for (let match of urlsInLine) {
+      if (this.cursorWithinBoundaries(cursor, match)) {
+        return {
+          start: { line: cursor.line, ch: match.index },
+          end: { line: cursor.line, ch: match.index + match[0].length },
+        };
+      }
     }
 
     return {
-      start: { line: cursor.line, ch: startCh },
-      end: { line: cursor.line, ch: endCh },
+      start: cursor,
+      end: cursor,
     };
+  }
+
+  public static getEditorPositionFromIndex(
+    content: string,
+    index: number
+  ): EditorPosition {
+    let substr = content.substr(0, index);
+
+    let l = 0;
+    let offset = -1;
+    let r = -1;
+    for (; (r = substr.indexOf("\n", r + 1)) !== -1; l++, offset = r);
+    offset += 1;
+
+    let ch = content.substr(offset, index - offset).length;
+
+    return { line: l, ch: ch };
   }
 }

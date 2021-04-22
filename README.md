@@ -16,7 +16,7 @@ If your text cursor is within the url `https://github.com/zolrath/obsidian-auto-
 ### Overwrite Titles Of Existing Markdown Links
 Additionally, using `ctrl-shift-e` (Windows) or `cmd-shift-e` (OS X) you can overwrite an existing title of a markdown link with the fetched title from the url.
 
-If your text cursor is within the url portion (does not trigger in the title section) of `[some plugin](https://github.com/zolrath/obsidian-auto-link-title)` pressing `ctrl+shift+e` fetches the sites title and replaces it, resulting in `[zolrath/obsidian-auto-link-title: Automatically fetch the titles of pasted links](https://github.com/zolrath/obsidian-auto-link-title)`
+If your text cursor is within `[some plugin](https://github.com/zolrath/obsidian-auto-link-title)` pressing `ctrl+shift+e` fetches the sites title and replaces it, resulting in `[zolrath/obsidian-auto-link-title: Automatically fetch the titles of pasted links](https://github.com/zolrath/obsidian-auto-link-title)`
 
 ### Privacy Note
 In order to retrieve the title this plugin downloads the page located at the pasted URL and extracts the title.

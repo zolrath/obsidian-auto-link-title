@@ -1,23 +1,12 @@
 import { EditorExtensions } from "editor-enhancements";
 import { Plugin, MarkdownView, Editor } from "obsidian";
 import { nanoid } from "nanoid";
-
-interface AutoLinkTitleSettings {
-  regex: RegExp;
-  linkRegex: RegExp;
-  imageRegex: RegExp;
-}
+import { AutoLinkTitleSettings, DEFAULT_SETTINGS } from './settings'
+import { CheckIf } from "checkif";
 
 interface PasteFunction {
   (this: HTMLElement, ev: ClipboardEvent): void;
 }
-
-const DEFAULT_SETTINGS: AutoLinkTitleSettings = {
-  regex: /^(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})$/i,
-  linkRegex: /^\[([^\[\]]*)\]\((https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})\)$/i,
-  imageRegex: /\.(gif|jpe?g|tiff?|png|webp|bmp|tga|psd|ai)/i
-};
-
 
 export default class AutoLinkTitle extends Plugin {
   settings: AutoLinkTitleSettings;
@@ -51,11 +40,11 @@ export default class AutoLinkTitle extends Plugin {
     let selectedText = (EditorExtensions.getSelectedText(editor) || "").trim();
 
     // If the cursor is on a raw html link, convert to a markdown link and fetch title
-    if (this.isUrl(selectedText)) {
+    if (CheckIf.isUrl(selectedText)) {
       this.convertUrlToTitledLink(editor, selectedText);
     }
     // If the cursor is on the URL part of a markdown link, fetch title and replace existing link title
-    else if (this.isLinkedUrl(selectedText)) {
+    else if (CheckIf.isLinkedUrl(selectedText)) {
       var link = this.getUrlFromLink(selectedText);
       this.convertUrlToTitledLink(editor, link);
     }
@@ -69,17 +58,18 @@ export default class AutoLinkTitle extends Plugin {
     // If its not a URL, we return false to allow the default paste handler to take care of it.
     // Similarly, image urls don't have a meaningful <title> attribute so downloading it
     // to fetch the title is a waste of bandwidth.
-    if (!this.isUrl(clipboardText) || this.isImage(clipboardText)) {
+    if (!CheckIf.isUrl(clipboardText) || CheckIf.isImage(clipboardText)) {
       return;
     }
 
+    // We've decided to handle the paste, stop propagation to the default handler.
     clipboard.stopPropagation();
     clipboard.preventDefault();
 
     // If it looks like we're pasting the url into a markdown link already, don't fetch title
     // as the user has already probably put a meaningful title, also it would lead to the title 
     // being inside the link.
-    if (this.isMarkdownLinkAlready(editor)) {
+    if (CheckIf.isMarkdownLinkAlready(editor) || CheckIf.isAfterQuote(editor)) {
       editor.replaceSelection(clipboardText);
       return;
     }
@@ -91,24 +81,21 @@ export default class AutoLinkTitle extends Plugin {
 
   convertUrlToTitledLink(editor: Editor, text: string): void {
     // Generate a unique id for find/replace operations for the title.
-    let pasteId = nanoid(5);
+    let pasteId = `Fetching Title#${nanoid(5)}`;
 
-    // Remove the existing link to reset the cursor position
-    editor.replaceSelection("");
     // Instantly paste so you don't wonder if paste is broken
-    let cursor = editor.getCursor();
-    editor.replaceSelection(`[Fetching Title](${text})`);
-
-    // Create marker so we can replace Fetching Title with actual title
-    let start = { line: cursor.line, ch: cursor.ch + 1 };
-    let end = { line: cursor.line, ch: cursor.ch + 15 };
-    let marker = editor.markText(start, end);
+    editor.replaceSelection(`[${pasteId}](${text})`);
 
     // Fetch title from site, replace Fetching Title with actual title
     this.fetchUrlTitle(text).then((title) => {
-      var location = marker.find();
-      editor.replaceRange(title, location.from, location.to);
-      marker.clear();
+      let text = editor.getValue();
+
+      let start = text.indexOf(pasteId);
+      let end = start + pasteId.length;
+      let startPos = EditorExtensions.getEditorPositionFromIndex(text, start);
+      let endPos = EditorExtensions.getEditorPositionFromIndex(text, end);
+
+      editor.replaceRange(title, startPos, endPos);
     });
   }
 
@@ -139,43 +126,17 @@ export default class AutoLinkTitle extends Plugin {
       .catch(error => "Site Unreachable");
   }
 
-  isMarkdownLinkAlready(editor: Editor): boolean {
-    let cursor = editor.getCursor();
-
-      // Check if the characters before the url are ]( to indicate a markdown link
-      var titleEnd = editor.getRange(
-        { ch: cursor.ch - 2, line: cursor.line },
-        { ch: cursor.ch, line: cursor.line }
-      );
-
-      return titleEnd == "]("
-  }
-
-  isUrl(text: string): boolean {
-    let urlRegex = new RegExp(this.settings.regex);
-    return urlRegex.test(text);
-  }
-
-  isImage(text: string): boolean {
-    let imageRegex = new RegExp(this.settings.imageRegex);
-    return imageRegex.test(text);
-  }
-
-  isLinkedUrl(text: string): boolean {
-    let urlRegex = new RegExp(this.settings.linkRegex);
-    return urlRegex.test(text);
-  }
-
-  getUrlFromLink(text: string): string {
-    let urlRegex = new RegExp(this.settings.linkRegex);
-    return urlRegex.exec(text)[2];
-  }
-
   private getEditor(): Editor {
     let activeLeaf = this.app.workspace.getActiveViewOfType(MarkdownView);
     if (activeLeaf == null) return;
     return activeLeaf.editor;
   }
+
+  public getUrlFromLink(text: string): string {
+    let urlRegex = new RegExp(DEFAULT_SETTINGS.linkRegex);
+    return urlRegex.exec(text)[2];
+  }
+
   onunload() {
     console.log("unloading obsidian-auto-link-title");
     this.app.workspace.containerEl.removeEventListener("paste", this.pasteFunction, true);
