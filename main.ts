@@ -1,6 +1,5 @@
 import { EditorExtensions } from "editor-enhancements";
 import { Plugin, MarkdownView, Editor } from "obsidian";
-import { nanoid } from "nanoid";
 import { AutoLinkTitleSettings, DEFAULT_SETTINGS } from './settings'
 import { CheckIf } from "checkif";
 
@@ -17,8 +16,12 @@ export default class AutoLinkTitle extends Plugin {
     await this.loadSettings();
 
     // Listen to paste event
-    this.pasteFunction = this.pasteUrlWithTitle.bind(this)
-    this.app.workspace.containerEl.addEventListener("paste", this.pasteFunction, true);
+    this.pasteFunction = this.pasteUrlWithTitle.bind(this);
+    this.app.workspace.containerEl.addEventListener(
+      "paste",
+      this.pasteFunction,
+      true
+    );
 
     this.addCommand({
       id: "enhance-url-with-title",
@@ -56,9 +59,9 @@ export default class AutoLinkTitle extends Plugin {
   pasteUrlWithTitle(clipboard: ClipboardEvent): void {
     // Only attempt fetch if online
     if (!navigator.onLine) return;
-    
+
     let editor = this.getEditor();
-    let clipboardText = clipboard.clipboardData.getData('text/plain');
+    let clipboardText = clipboard.clipboardData.getData("text/plain");
     if (clipboardText == null || clipboardText == "") return;
 
     // If its not a URL, we return false to allow the default paste handler to take care of it.
@@ -73,7 +76,7 @@ export default class AutoLinkTitle extends Plugin {
     clipboard.preventDefault();
 
     // If it looks like we're pasting the url into a markdown link already, don't fetch title
-    // as the user has already probably put a meaningful title, also it would lead to the title 
+    // as the user has already probably put a meaningful title, also it would lead to the title
     // being inside the link.
     if (CheckIf.isMarkdownLinkAlready(editor) || CheckIf.isAfterQuote(editor)) {
       editor.replaceSelection(clipboardText);
@@ -87,7 +90,7 @@ export default class AutoLinkTitle extends Plugin {
 
   convertUrlToTitledLink(editor: Editor, text: string): void {
     // Generate a unique id for find/replace operations for the title.
-    let pasteId = `Fetching Title#${nanoid(5)}`;
+    let pasteId = `Fetching Title#${this.createBlockHash()}`;
 
     // Instantly paste so you don't wonder if paste is broken
     editor.replaceSelection(`[${pasteId}](${text})`);
@@ -113,10 +116,10 @@ export default class AutoLinkTitle extends Plugin {
     )}`;
 
     return fetch(corsed)
-      .then(response => {
+      .then((response) => {
         return response.text();
       })
-      .then(html => {
+      .then((html) => {
         const doc = new DOMParser().parseFromString(html, "text/html");
         const title = doc.querySelectorAll("title")[0];
         if (title == null || title.innerText.length == 0) {
@@ -129,7 +132,7 @@ export default class AutoLinkTitle extends Plugin {
         }
         return title.innerText;
       })
-      .catch(error => "Site Unreachable");
+      .catch((error) => "Site Unreachable");
   }
 
   private getEditor(): Editor {
@@ -143,9 +146,24 @@ export default class AutoLinkTitle extends Plugin {
     return urlRegex.exec(text)[2];
   }
 
+  // Custom hashid by @shabegom
+  private createBlockHash(): string {
+    let result = "";
+    var characters = "abcdefghijklmnopqrstuvwxyz0123456789";
+    var charactersLength = characters.length;
+    for (var i = 0; i < 4; i++) {
+      result += characters.charAt(Math.floor(Math.random() * charactersLength));
+    }
+    return result;
+  }
+
   onunload() {
     console.log("unloading obsidian-auto-link-title");
-    this.app.workspace.containerEl.removeEventListener("paste", this.pasteFunction, true);
+    this.app.workspace.containerEl.removeEventListener(
+      "paste",
+      this.pasteFunction,
+      true
+    );
   }
 
   async loadSettings() {
