@@ -2,7 +2,7 @@ const { remote } = require("electron");
 
 export default function getPageTitle(url: string): Promise<string> {
   // If we're on Desktop use the Electron scraper
-  if (remote != null && false) {
+  if (remote != null) {
     const { BrowserWindow, ipcMain } = remote;
     return new Promise<string>((resolve) => {
       const window = new BrowserWindow({
