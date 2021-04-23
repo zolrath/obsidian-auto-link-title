@@ -2,6 +2,7 @@ import { EditorExtensions } from "editor-enhancements";
 import { Plugin, MarkdownView, Editor } from "obsidian";
 import { AutoLinkTitleSettings, DEFAULT_SETTINGS } from './settings'
 import { CheckIf } from "checkif";
+import getPageTitle from "scraper";
 
 interface PasteFunction {
   (this: HTMLElement, ev: ClipboardEvent): void;
@@ -111,28 +112,34 @@ export default class AutoLinkTitle extends Plugin {
   fetchUrlTitle(text: string): Promise<string> {
     // console.log(`Fetching ${text} for title`);
     // Because of CORS you can't fetch the site directly
-    var corsed = `https://api.allorigins.win/get?url=${encodeURIComponent(
-      text
-    )}`;
+    // var corsed = `https://api.allorigins.win/get?url=${encodeURIComponent(
+    //   text
+    // )}`;
 
-    return fetch(corsed)
-      .then((response) => {
-        return response.text();
-      })
-      .then((html) => {
-        const doc = new DOMParser().parseFromString(html, "text/html");
-        const title = doc.querySelectorAll("title")[0];
-        if (title == null || title.innerText.length == 0) {
-          // If site is javascript based and has a no-title attribute when unloaded, use it.
-          var noTitle = title.getAttr("no-title");
-          if (noTitle != null) return noTitle;
-
-          // Otherwise if the site has no title/requires javascript simply return Title Unknown
+    return getPageTitle(text).then(title => {
+      if (title == null || title == "")
           return "Title Unknown";
-        }
-        return title.innerText;
-      })
-      .catch((error) => "Site Unreachable");
+
+      return title;
+    }).catch((error) => "Site Unreachable");
+    // return fetch(corsed)
+    //   .then((response) => {
+    //     return response.text();
+    //   })
+    //   .then((html) => {
+    //     const doc = new DOMParser().parseFromString(html, "text/html");
+    //     const title = doc.querySelectorAll("title")[0];
+    //     if (title == null || title.innerText.length == 0) {
+    //       // If site is javascript based and has a no-title attribute when unloaded, use it.
+    //       var noTitle = title.getAttr("no-title");
+    //       if (noTitle != null) return noTitle;
+
+    //       // Otherwise if the site has no title/requires javascript simply return Title Unknown
+    //       return "Title Unknown";
+    //     }
+    //     return title.innerText;
+    //   })
+    //   .catch((error) => "Site Unreachable");
   }
 
   private getEditor(): Editor {
