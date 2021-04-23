@@ -29,7 +29,7 @@ export default function getPageTitle(url: string): Promise<string> {
       ipcMain.on("pageloaded", (_event, title) => {
         window.destroy();
 
-        resolve(title.replace(/^\s+|\s+$/g, ""));
+        resolve(title);
       });
     });
     // Otherwise if we're on mobile use a CORS proxy
