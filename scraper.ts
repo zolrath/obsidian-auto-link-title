@@ -1,36 +1,45 @@
-const { remote } = require("electron");
+const { remote, ipcRenderer } = require("electron");
 
 export default function getPageTitle(url: string): Promise<string> {
   // If we're on Desktop use the Electron scraper
   if (remote != null) {
     const { BrowserWindow, ipcMain } = remote;
     return new Promise<string>((resolve) => {
-      const window = new BrowserWindow({
-        width: 1000,
-        height: 600,
-        webPreferences: {
-          webSecurity: false,
-          nodeIntegration: true,
-          images: false,
-        },
-        show: false,
-      });
+      try {
+        const window = new BrowserWindow({
+          width: 1000,
+          height: 600,
+          webPreferences: {
+            webSecurity: false,
+            nodeIntegration: true,
+            images: false,
+          },
+          show: false,
+        });
 
-      // After page finishes loading send the head > title via a pageloaded event
-      window.webContents.on("did-finish-load", async () => {
-        await window.webContents.executeJavaScript(
-          `require('electron').ipcRenderer.send('pageloaded', document.querySelector('head > title').innerText);`
-        );
-      });
+        // After page finishes loading send the title via a pageloaded event
+        window.webContents.on("did-finish-load", async () => {
+          try {
+            ipcRenderer.send('pageloaded', window.webContents.getTitle());
+          } catch (ex) {
+            resolve("Title Unknown")
+          }
+        });
 
-      window.loadURL(url);
+        window.loadURL(url);
 
-      // Clean up the title and remove the BrowserWindow
-      ipcMain.on("pageloaded", (_event, title) => {
-        window.destroy();
-
-        resolve(title);
-      });
+        // Clean up the title and remove the BrowserWindow
+        ipcMain.on("pageloaded", (_event, title) => {
+          window.destroy();
+          if (title != null && title != '') {
+            resolve (title)
+          } else {
+            resolve("Title Unknown");
+          }
+        });
+      } catch (ex) {
+        resolve("Site Unreachable");
+      }
     });
     // Otherwise if we're on mobile use a CORS proxy
   } else {
@@ -58,7 +67,7 @@ export default function getPageTitle(url: string): Promise<string> {
           return resolve(title.innerText);
         })
         .catch((error) => {
-        //   console.error(error);
+          console.error(error);
           return resolve("Site Unreachable");
         });
     });
