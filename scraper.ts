@@ -1,8 +1,9 @@
-const { remote, ipcRenderer } = require("electron");
+const electronPkg = require("electron");
 
 export default function getPageTitle(url: string): Promise<string> {
   // If we're on Desktop use the Electron scraper
-  if (remote != null) {
+  if (electronPkg != null) {
+    const { remote, ipcRenderer } = electronPkg;
     const { BrowserWindow, ipcMain } = remote;
     return new Promise<string>((resolve) => {
       try {
