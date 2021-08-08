@@ -1,5 +1,5 @@
 import { EditorExtensions } from "editor-enhancements";
-import { Plugin, MarkdownView, Editor } from "obsidian";
+import { Plugin, MarkdownView, Editor, PluginSettingTab, App, Setting } from "obsidian";
 import { AutoLinkTitleSettings, DEFAULT_SETTINGS } from './settings'
 import { CheckIf } from "checkif";
 import getPageTitle from "scraper";
@@ -35,6 +35,8 @@ export default class AutoLinkTitle extends Plugin {
         },
       ],
     });
+
+    this.addSettingTab(new AutoLinkTitleSettingTab(this.app, this));
   }
 
   addTitleToLink(): void {
@@ -70,6 +72,12 @@ export default class AutoLinkTitle extends Plugin {
     // to fetch the title is a waste of bandwidth.
     if (!CheckIf.isUrl(clipboardText) || CheckIf.isImage(clipboardText)) {
       return;
+    }
+
+    let selectedText = (EditorExtensions.getSelectedText(editor) || "").trim();
+    if (selectedText && !this.settings.shouldReplaceSelection) {
+      // If there is selected text and shouldReplaceSelection is false, do not fetch title
+      return
     }
 
     // We've decided to handle the paste, stop propagation to the default handler.
@@ -159,4 +167,30 @@ export default class AutoLinkTitle extends Plugin {
   async saveSettings() {
     await this.saveData(this.settings);
   }
+}
+
+class AutoLinkTitleSettingTab extends PluginSettingTab {
+	plugin: AutoLinkTitle;
+
+	constructor(app: App, plugin: AutoLinkTitle) {
+		super(app, plugin);
+		this.plugin = plugin;
+	}
+
+	display(): void {
+		let {containerEl} = this;
+
+		containerEl.empty();
+
+		new Setting(containerEl)
+			.setName('Replace Selection')
+			.setDesc('Whether to replace a text selection with link and fetched title')
+			.addToggle(val => val
+				.setValue(this.plugin.settings.shouldReplaceSelection)
+				.onChange(async (value) => {
+					console.log(value);
+					this.plugin.settings.shouldReplaceSelection = value;
+					await this.plugin.saveSettings();
+				}));
+	}
 }
