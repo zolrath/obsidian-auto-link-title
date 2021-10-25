@@ -114,7 +114,7 @@ export default class AutoLinkTitle extends Plugin {
       if (title == null || title == "") {
           return "Title Unknown";
       }
-      return title.trim();
+      return title.replace(/(\r\n|\n|\r)/gm, "").trim();
     }).catch((error) => {
       // console.error(error)
       return "Site Unreachable"
