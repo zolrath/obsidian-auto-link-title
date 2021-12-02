@@ -89,28 +89,32 @@ export default class AutoLinkTitle extends Plugin {
     return;
   }
 
-  convertUrlToTitledLink(editor: Editor, text: string): void {
+  convertUrlToTitledLink(editor: Editor, url: string): void {
     // Generate a unique id for find/replace operations for the title.
     let pasteId = `Fetching Title#${this.createBlockHash()}`;
 
     // Instantly paste so you don't wonder if paste is broken
-    editor.replaceSelection(`[${pasteId}](${text})`);
+    editor.replaceSelection(`[${pasteId}](${url})`);
 
     // Fetch title from site, replace Fetching Title with actual title
-    this.fetchUrlTitle(text).then((title) => {
+    this.fetchUrlTitle(url).then((title) => {
       let text = editor.getValue();
 
       let start = text.indexOf(pasteId);
-      let end = start + pasteId.length;
-      let startPos = EditorExtensions.getEditorPositionFromIndex(text, start);
-      let endPos = EditorExtensions.getEditorPositionFromIndex(text, end);
+      if (start < 0) {
+        console.log(`Unable to find text "${pasteId}" in current editor, bailing out; link ${url}`);
+      } else {
+        let end = start + pasteId.length;
+        let startPos = EditorExtensions.getEditorPositionFromIndex(text, start);
+        let endPos = EditorExtensions.getEditorPositionFromIndex(text, end);
 
-      editor.replaceRange(title, startPos, endPos);
+        editor.replaceRange(title, startPos, endPos);
+      }
     });
   }
 
-  fetchUrlTitle(text: string): Promise<string> {
-    return getPageTitle(text).then(title => {
+  fetchUrlTitle(url: string): Promise<string> {
+    return getPageTitle(url).then(title => {
       if (title == null || title == "") {
           return "Title Unknown";
       }
@@ -127,9 +131,9 @@ export default class AutoLinkTitle extends Plugin {
     return activeLeaf.editor;
   }
 
-  public getUrlFromLink(text: string): string {
+  public getUrlFromLink(link: string): string {
     let urlRegex = new RegExp(DEFAULT_SETTINGS.linkRegex);
-    return urlRegex.exec(text)[2];
+    return urlRegex.exec(link)[2];
   }
 
   // Custom hashid by @shabegom
