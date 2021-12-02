@@ -3,8 +3,8 @@ const electronPkg = require("electron");
 export default function getPageTitle(url: string): Promise<string> {
   // If we're on Desktop use the Electron scraper
   if (electronPkg != null) {
-    const { remote, ipcRenderer } = electronPkg;
-    const { BrowserWindow, ipcMain } = remote;
+    const { remote } = electronPkg;
+    const { BrowserWindow } = remote;
     return new Promise<string>((resolve) => {
       try {
         const window = new BrowserWindow({
@@ -18,26 +18,21 @@ export default function getPageTitle(url: string): Promise<string> {
           show: false,
         });
 
-        // After page finishes loading send the title via a pageloaded event
         window.webContents.on("did-finish-load", async () => {
           try {
-            ipcRenderer.send('pageloaded', window.webContents.getTitle());
+            const title = window.webContents.getTitle();
+            window.destroy();
+            if (title != null && title != '') {
+              resolve(title);
+            } else {
+              resolve("Title Unknown");
+            }
           } catch (ex) {
-            resolve("Title Unknown")
+            resolve("Title Unknown");
           }
         });
 
         window.loadURL(url);
-
-        // Clean up the title and remove the BrowserWindow
-        ipcMain.on("pageloaded", (_event, title) => {
-          window.destroy();
-          if (title != null && title != '') {
-            resolve (title)
-          } else {
-            resolve("Title Unknown");
-          }
-        });
       } catch (ex) {
         resolve("Site Unreachable");
       }
