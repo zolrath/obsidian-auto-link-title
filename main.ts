@@ -89,36 +89,34 @@ export default class AutoLinkTitle extends Plugin {
     return;
   }
 
-  convertUrlToTitledLink(editor: Editor, text: string): void {
+  async convertUrlToTitledLink(editor: Editor, url: string): Promise<void> {
     // Generate a unique id for find/replace operations for the title.
-    let pasteId = `Fetching Title#${this.createBlockHash()}`;
+    const pasteId = `Fetching Title#${this.createBlockHash()}`;
 
     // Instantly paste so you don't wonder if paste is broken
-    editor.replaceSelection(`[${pasteId}](${text})`);
+    editor.replaceSelection(`[${pasteId}](${url})`);
 
     // Fetch title from site, replace Fetching Title with actual title
-    this.fetchUrlTitle(text).then((title) => {
-      let text = editor.getValue();
+    const title = await this.fetchUrlTitle(url)
 
-      let start = text.indexOf(pasteId);
-      let end = start + pasteId.length;
-      let startPos = EditorExtensions.getEditorPositionFromIndex(text, start);
-      let endPos = EditorExtensions.getEditorPositionFromIndex(text, end);
+    const text = editor.getValue();
 
-      editor.replaceRange(title, startPos, endPos);
-    });
+    const start = text.indexOf(pasteId);
+    const end = start + pasteId.length;
+    const startPos = EditorExtensions.getEditorPositionFromIndex(text, start);
+    const endPos = EditorExtensions.getEditorPositionFromIndex(text, end);
+
+    editor.replaceRange(title, startPos, endPos);
   }
 
-  fetchUrlTitle(text: string): Promise<string> {
-    return getPageTitle(text).then(title => {
-      if (title == null || title == "") {
-          return "Title Unknown";
-      }
+  async fetchUrlTitle(text: string): Promise<string> {
+    try {
+      const title = await getPageTitle(text);
       return title.trim();
-    }).catch((error) => {
+    } catch (error) {
       // console.error(error)
       return "Site Unreachable"
-    });
+    }
   }
 
   private getEditor(): Editor {
