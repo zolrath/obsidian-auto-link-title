@@ -1,6 +1,13 @@
 import { EditorExtensions } from "editor-enhancements";
-import { Plugin, MarkdownView, Editor, PluginSettingTab, App, Setting } from "obsidian";
-import { AutoLinkTitleSettings, DEFAULT_SETTINGS } from './settings'
+import {
+  Plugin,
+  MarkdownView,
+  Editor,
+  PluginSettingTab,
+  App,
+  Setting,
+} from "obsidian";
+import { AutoLinkTitleSettings, DEFAULT_SETTINGS } from "./settings";
 import { CheckIf } from "checkif";
 import getPageTitle from "scraper";
 
@@ -77,7 +84,7 @@ export default class AutoLinkTitle extends Plugin {
     let selectedText = (EditorExtensions.getSelectedText(editor) || "").trim();
     if (selectedText && !this.settings.shouldReplaceSelection) {
       // If there is selected text and shouldReplaceSelection is false, do not fetch title
-      return
+      return;
     }
 
     // We've decided to handle the paste, stop propagation to the default handler.
@@ -105,13 +112,15 @@ export default class AutoLinkTitle extends Plugin {
     editor.replaceSelection(`[${pasteId}](${url})`);
 
     // Fetch title from site, replace Fetching Title with actual title
-    const title = await this.fetchUrlTitle(url)
+    const title = await this.fetchUrlTitle(url);
 
     const text = editor.getValue();
 
     const start = text.indexOf(pasteId);
     if (start < 0) {
-      console.log(`Unable to find text "${pasteId}" in current editor, bailing out; link ${url}`);
+      console.log(
+        `Unable to find text "${pasteId}" in current editor, bailing out; link ${url}`
+      );
     } else {
       const end = start + pasteId.length;
       const startPos = EditorExtensions.getEditorPositionFromIndex(text, start);
@@ -127,7 +136,7 @@ export default class AutoLinkTitle extends Plugin {
       return title.replace(/(\r\n|\n|\r)/gm, "").trim();
     } catch (error) {
       // console.error(error)
-      return "Site Unreachable"
+      return "Site Unreachable";
     }
   }
 
@@ -172,27 +181,31 @@ export default class AutoLinkTitle extends Plugin {
 }
 
 class AutoLinkTitleSettingTab extends PluginSettingTab {
-	plugin: AutoLinkTitle;
+  plugin: AutoLinkTitle;
 
-	constructor(app: App, plugin: AutoLinkTitle) {
-		super(app, plugin);
-		this.plugin = plugin;
-	}
+  constructor(app: App, plugin: AutoLinkTitle) {
+    super(app, plugin);
+    this.plugin = plugin;
+  }
 
-	display(): void {
-		let {containerEl} = this;
+  display(): void {
+    let { containerEl } = this;
 
-		containerEl.empty();
+    containerEl.empty();
 
-		new Setting(containerEl)
-			.setName('Replace Selection')
-			.setDesc('Whether to replace a text selection with link and fetched title')
-			.addToggle(val => val
-				.setValue(this.plugin.settings.shouldReplaceSelection)
-				.onChange(async (value) => {
-					console.log(value);
-					this.plugin.settings.shouldReplaceSelection = value;
-					await this.plugin.saveSettings();
-				}));
-	}
+    new Setting(containerEl)
+      .setName("Replace Selection")
+      .setDesc(
+        "Whether to replace a text selection with link and fetched title"
+      )
+      .addToggle((val) =>
+        val
+          .setValue(this.plugin.settings.shouldReplaceSelection)
+          .onChange(async (value) => {
+            console.log(value);
+            this.plugin.settings.shouldReplaceSelection = value;
+            await this.plugin.saveSettings();
+          })
+      );
+  }
 }
