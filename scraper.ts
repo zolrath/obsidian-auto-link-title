@@ -1,5 +1,5 @@
 const electronPkg = require("electron");
-import { request, RequestParam } from "obsidian";
+import { request } from "obsidian";
 
 function blank(text: string): boolean {
   return text === undefined || text === null || text === "";
