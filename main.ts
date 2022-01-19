@@ -95,14 +95,14 @@ export default class AutoLinkTitle extends Plugin {
     // Similarly, image urls don't have a meaningful <title> attribute so downloading it
     // to fetch the title is a waste of bandwidth.
     if (!CheckIf.isUrl(clipboardText) || CheckIf.isImage(clipboardText)) {
-      editor.replaceRange(clipboardText, editor.getCursor());
+      editor.replaceSelection(clipboardText);
       return;
     }
 
     let selectedText = (EditorExtensions.getSelectedText(editor) || "").trim();
     if (selectedText && !this.settings.shouldReplaceSelection) {
       // If there is selected text and shouldReplaceSelection is false, do not fetch title
-      editor.replaceRange(clipboardText, editor.getCursor());
+      editor.replaceSelection(clipboardText);
       return;
     }
 
