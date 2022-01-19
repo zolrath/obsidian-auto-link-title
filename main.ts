@@ -25,9 +25,8 @@ export default class AutoLinkTitle extends Plugin {
 
     this.addCommand({
       id: "auto-link-title-paste",
-      name: "Paste URL and auto fetch Title",
+      name: "Paste URL and auto fetch title",
       callback: () => {
-        console.log("did the thing");
         this.manualPasteUrlWithTitle();
       },
       hotkeys: [
