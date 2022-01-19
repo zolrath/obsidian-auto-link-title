@@ -1,5 +1,5 @@
 import { EditorExtensions } from "editor-enhancements";
-import { Plugin, MarkdownView, Editor } from "obsidian";
+import { Plugin, MarkdownView, Editor, PluginSettingTab, App, Setting } from "obsidian";
 import { AutoLinkTitleSettings, DEFAULT_SETTINGS } from './settings'
 import { CheckIf } from "checkif";
 import getPageTitle from "scraper";
@@ -35,6 +35,8 @@ export default class AutoLinkTitle extends Plugin {
         },
       ],
     });
+
+    this.addSettingTab(new AutoLinkTitleSettingTab(this.app, this));
   }
 
   addTitleToLink(): void {
@@ -72,6 +74,12 @@ export default class AutoLinkTitle extends Plugin {
       return;
     }
 
+    let selectedText = (EditorExtensions.getSelectedText(editor) || "").trim();
+    if (selectedText && !this.settings.shouldReplaceSelection) {
+      // If there is selected text and shouldReplaceSelection is false, do not fetch title
+      return
+    }
+
     // We've decided to handle the paste, stop propagation to the default handler.
     clipboard.stopPropagation();
     clipboard.preventDefault();
@@ -89,36 +97,38 @@ export default class AutoLinkTitle extends Plugin {
     return;
   }
 
-  convertUrlToTitledLink(editor: Editor, text: string): void {
+  async convertUrlToTitledLink(editor: Editor, url: string): Promise<void> {
     // Generate a unique id for find/replace operations for the title.
-    let pasteId = `Fetching Title#${this.createBlockHash()}`;
+    const pasteId = `Fetching Title#${this.createBlockHash()}`;
 
     // Instantly paste so you don't wonder if paste is broken
-    editor.replaceSelection(`[${pasteId}](${text})`);
+    editor.replaceSelection(`[${pasteId}](${url})`);
 
     // Fetch title from site, replace Fetching Title with actual title
-    this.fetchUrlTitle(text).then((title) => {
-      let text = editor.getValue();
+    const title = await this.fetchUrlTitle(url)
 
-      let start = text.indexOf(pasteId);
-      let end = start + pasteId.length;
-      let startPos = EditorExtensions.getEditorPositionFromIndex(text, start);
-      let endPos = EditorExtensions.getEditorPositionFromIndex(text, end);
+    const text = editor.getValue();
+
+    const start = text.indexOf(pasteId);
+    if (start < 0) {
+      console.log(`Unable to find text "${pasteId}" in current editor, bailing out; link ${url}`);
+    } else {
+      const end = start + pasteId.length;
+      const startPos = EditorExtensions.getEditorPositionFromIndex(text, start);
+      const endPos = EditorExtensions.getEditorPositionFromIndex(text, end);
 
       editor.replaceRange(title, startPos, endPos);
-    });
+    }
   }
 
-  fetchUrlTitle(text: string): Promise<string> {
-    return getPageTitle(text).then(title => {
-      if (title == null || title == "") {
-          return "Title Unknown";
-      }
-      return title.trim();
-    }).catch((error) => {
+  async fetchUrlTitle(url: string): Promise<string> {
+    try {
+      const title = await getPageTitle(url);
+      return title.replace(/(\r\n|\n|\r)/gm, "").trim();
+    } catch (error) {
       // console.error(error)
       return "Site Unreachable"
-    });
+    }
   }
 
   private getEditor(): Editor {
@@ -127,9 +137,9 @@ export default class AutoLinkTitle extends Plugin {
     return activeLeaf.editor;
   }
 
-  public getUrlFromLink(text: string): string {
+  public getUrlFromLink(link: string): string {
     let urlRegex = new RegExp(DEFAULT_SETTINGS.linkRegex);
-    return urlRegex.exec(text)[2];
+    return urlRegex.exec(link)[2];
   }
 
   // Custom hashid by @shabegom
@@ -159,4 +169,30 @@ export default class AutoLinkTitle extends Plugin {
   async saveSettings() {
     await this.saveData(this.settings);
   }
+}
+
+class AutoLinkTitleSettingTab extends PluginSettingTab {
+	plugin: AutoLinkTitle;
+
+	constructor(app: App, plugin: AutoLinkTitle) {
+		super(app, plugin);
+		this.plugin = plugin;
+	}
+
+	display(): void {
+		let {containerEl} = this;
+
+		containerEl.empty();
+
+		new Setting(containerEl)
+			.setName('Replace Selection')
+			.setDesc('Whether to replace a text selection with link and fetched title')
+			.addToggle(val => val
+				.setValue(this.plugin.settings.shouldReplaceSelection)
+				.onChange(async (value) => {
+					console.log(value);
+					this.plugin.settings.shouldReplaceSelection = value;
+					await this.plugin.saveSettings();
+				}));
+	}
 }
