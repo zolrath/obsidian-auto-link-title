@@ -29,12 +29,7 @@ export default class AutoLinkTitle extends Plugin {
       callback: () => {
         this.manualPasteUrlWithTitle();
       },
-      hotkeys: [
-        {
-          modifiers: ["Mod", "Shift"],
-          key: "v",
-        },
-      ],
+      hotkeys: [],
     });
 
     this.app.workspace.containerEl.addEventListener(
