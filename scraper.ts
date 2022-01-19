@@ -1,7 +1,8 @@
 const electronPkg = require("electron");
+import { request, RequestParam } from "obsidian";
 
 function blank(text: string): boolean {
-  return text === undefined || text === null || text === '';
+  return text === undefined || text === null || text === "";
 }
 
 function notBlank(text: string): boolean {
@@ -42,10 +43,10 @@ async function electronGetPageTitle(url: string): Promise<string> {
       if (notBlank(title)) {
         return title;
       } else {
-        return "Title Unknown";
+        return url;
       }
     } catch (ex) {
-      return "Title Unknown";
+      return url;
     }
   } catch (ex) {
     console.error(ex);
@@ -54,30 +55,27 @@ async function electronGetPageTitle(url: string): Promise<string> {
 }
 
 async function nonElectronGetPageTitle(url: string): Promise<string> {
-  // if we're on mobile use a CORS proxy; because of CORS you can't fetch the site directly
-  const corsed = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-
   try {
-    const response = await fetch(corsed);
-    const html = await response.text();
+    const html = await request({ url });
 
     const doc = new DOMParser().parseFromString(html, "text/html");
     const title = doc.querySelectorAll("title")[0];
 
-    if (title == null || blank(title.innerText)) {
+    if (title == null || blank(title?.innerText)) {
       // If site is javascript based and has a no-title attribute when unloaded, use it.
-      var noTitle = title.getAttr("no-title");
+      var noTitle = title?.getAttr("no-title");
       if (notBlank(noTitle)) {
         return noTitle;
       }
 
       // Otherwise if the site has no title/requires javascript simply return Title Unknown
-      return "Title Unknown";
+      return url;
     }
 
     return title.innerText;
   } catch (ex) {
     console.error(ex);
+
     return "Site Unreachable";
   }
 }
