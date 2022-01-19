@@ -1,5 +1,5 @@
 import { EditorExtensions } from "editor-enhancements";
-import { Plugin, MarkdownView, Editor } from "obsidian";
+import { Plugin, MarkdownView, Editor, PluginSettingTab, App, Setting } from "obsidian";
 import { AutoLinkTitleSettings, DEFAULT_SETTINGS } from './settings'
 import { CheckIf } from "checkif";
 import getPageTitle from "scraper";
@@ -35,6 +35,8 @@ export default class AutoLinkTitle extends Plugin {
         },
       ],
     });
+
+    this.addSettingTab(new AutoLinkTitleSettingTab(this.app, this));
   }
 
   addTitleToLink(): void {
@@ -72,6 +74,12 @@ export default class AutoLinkTitle extends Plugin {
       return;
     }
 
+    let selectedText = (EditorExtensions.getSelectedText(editor) || "").trim();
+    if (selectedText && !this.settings.shouldReplaceSelection) {
+      // If there is selected text and shouldReplaceSelection is false, do not fetch title
+      return
+    }
+
     // We've decided to handle the paste, stop propagation to the default handler.
     clipboard.stopPropagation();
     clipboard.preventDefault();
@@ -102,17 +110,21 @@ export default class AutoLinkTitle extends Plugin {
     const text = editor.getValue();
 
     const start = text.indexOf(pasteId);
-    const end = start + pasteId.length;
-    const startPos = EditorExtensions.getEditorPositionFromIndex(text, start);
-    const endPos = EditorExtensions.getEditorPositionFromIndex(text, end);
+    if (start < 0) {
+      console.log(`Unable to find text "${pasteId}" in current editor, bailing out; link ${url}`);
+    } else {
+      const end = start + pasteId.length;
+      const startPos = EditorExtensions.getEditorPositionFromIndex(text, start);
+      const endPos = EditorExtensions.getEditorPositionFromIndex(text, end);
 
-    editor.replaceRange(title, startPos, endPos);
+      editor.replaceRange(title, startPos, endPos);
+    }
   }
 
-  async fetchUrlTitle(text: string): Promise<string> {
+  async fetchUrlTitle(url: string): Promise<string> {
     try {
-      const title = await getPageTitle(text);
-      return title.trim();
+      const title = await getPageTitle(url);
+      return title.replace(/(\r\n|\n|\r)/gm, "").trim();
     } catch (error) {
       // console.error(error)
       return "Site Unreachable"
@@ -125,9 +137,9 @@ export default class AutoLinkTitle extends Plugin {
     return activeLeaf.editor;
   }
 
-  public getUrlFromLink(text: string): string {
+  public getUrlFromLink(link: string): string {
     let urlRegex = new RegExp(DEFAULT_SETTINGS.linkRegex);
-    return urlRegex.exec(text)[2];
+    return urlRegex.exec(link)[2];
   }
 
   // Custom hashid by @shabegom
@@ -157,4 +169,30 @@ export default class AutoLinkTitle extends Plugin {
   async saveSettings() {
     await this.saveData(this.settings);
   }
+}
+
+class AutoLinkTitleSettingTab extends PluginSettingTab {
+	plugin: AutoLinkTitle;
+
+	constructor(app: App, plugin: AutoLinkTitle) {
+		super(app, plugin);
+		this.plugin = plugin;
+	}
+
+	display(): void {
+		let {containerEl} = this;
+
+		containerEl.empty();
+
+		new Setting(containerEl)
+			.setName('Replace Selection')
+			.setDesc('Whether to replace a text selection with link and fetched title')
+			.addToggle(val => val
+				.setValue(this.plugin.settings.shouldReplaceSelection)
+				.onChange(async (value) => {
+					console.log(value);
+					this.plugin.settings.shouldReplaceSelection = value;
+					await this.plugin.saveSettings();
+				}));
+	}
 }
