@@ -73,13 +73,13 @@ export default class AutoLinkTitle extends Plugin {
     }
   }
 
-  // Simulate standard paste but using editor.replaceRange with clipboard text since we can't seem to dispatch a paste event.
+  // Simulate standard paste but using editor.replaceSelection with clipboard text since we can't seem to dispatch a paste event.
   async manualPasteUrlWithTitle(): Promise<void> {
     let editor = this.getEditor();
 
     // Only attempt fetch if online
     if (!navigator.onLine) {
-      editor.replaceRange(clipboardText, editor.getCursor());
+      editor.replaceSelection(clipboardText);
       return;
     }
 
