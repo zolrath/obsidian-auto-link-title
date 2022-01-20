@@ -32,10 +32,8 @@ export default class AutoLinkTitle extends Plugin {
       hotkeys: [],
     });
 
-    this.app.workspace.containerEl.addEventListener(
-      "paste",
-      this.pasteFunction,
-      true
+    this.registerEvent(
+      this.app.workspace.on("editor-paste", this.pasteFunction)
     );
 
     this.addCommand({
