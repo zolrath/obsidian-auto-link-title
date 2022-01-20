@@ -82,6 +82,10 @@ async function nonElectronGetPageTitle(url: string): Promise<string> {
 
 export default async function getPageTitle(url: string): Promise<string> {
   // If we're on Desktop use the Electron scraper
+  if (!(url.startsWith("http") || url.startsWith("https"))) {
+    url = "https://" + url;
+  }
+
   if (electronPkg != null) {
     return electronGetPageTitle(url);
   } else {
