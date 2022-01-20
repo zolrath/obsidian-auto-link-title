@@ -1,13 +1,10 @@
 import { EditorExtensions } from "editor-enhancements";
+import { Plugin, MarkdownView, Editor } from "obsidian";
 import {
-  Plugin,
-  MarkdownView,
-  Editor,
-  PluginSettingTab,
-  App,
-  Setting,
-} from "obsidian";
-import { AutoLinkTitleSettings, DEFAULT_SETTINGS } from "./settings";
+  AutoLinkTitleSettings,
+  AutoLinkTitleSettingTab,
+  DEFAULT_SETTINGS,
+} from "./settings";
 import { CheckIf } from "checkif";
 import getPageTitle from "scraper";
 
@@ -25,6 +22,16 @@ export default class AutoLinkTitle extends Plugin {
 
     // Listen to paste event
     this.pasteFunction = this.pasteUrlWithTitle.bind(this);
+
+    this.addCommand({
+      id: "auto-link-title-paste",
+      name: "Paste URL and auto fetch title",
+      callback: () => {
+        this.manualPasteUrlWithTitle();
+      },
+      hotkeys: [],
+    });
+
     this.app.workspace.containerEl.addEventListener(
       "paste",
       this.pasteFunction,
@@ -66,7 +73,52 @@ export default class AutoLinkTitle extends Plugin {
     }
   }
 
-  pasteUrlWithTitle(clipboard: ClipboardEvent): void {
+  // Simulate standard paste but using editor.replaceSelection with clipboard text since we can't seem to dispatch a paste event.
+  async manualPasteUrlWithTitle(): Promise<void> {
+    let editor = this.getEditor();
+
+    // Only attempt fetch if online
+    if (!navigator.onLine) {
+      editor.replaceSelection(clipboardText);
+      return;
+    }
+
+    var clipboardText = await navigator.clipboard.readText();
+    if (clipboardText == null || clipboardText == "") return;
+
+    // If its not a URL, we return false to allow the default paste handler to take care of it.
+    // Similarly, image urls don't have a meaningful <title> attribute so downloading it
+    // to fetch the title is a waste of bandwidth.
+    if (!CheckIf.isUrl(clipboardText) || CheckIf.isImage(clipboardText)) {
+      editor.replaceSelection(clipboardText);
+      return;
+    }
+
+    let selectedText = (EditorExtensions.getSelectedText(editor) || "").trim();
+    if (selectedText && !this.settings.shouldReplaceSelection) {
+      // If there is selected text and shouldReplaceSelection is false, do not fetch title
+      editor.replaceSelection(clipboardText);
+      return;
+    }
+
+    // If it looks like we're pasting the url into a markdown link already, don't fetch title
+    // as the user has already probably put a meaningful title, also it would lead to the title
+    // being inside the link.
+    if (CheckIf.isMarkdownLinkAlready(editor) || CheckIf.isAfterQuote(editor)) {
+      editor.replaceSelection(clipboardText);
+      return;
+    }
+
+    // At this point we're just pasting a link in a normal fashion, fetch its title.
+    this.convertUrlToTitledLink(editor, clipboardText);
+    return;
+  }
+
+  async pasteUrlWithTitle(clipboard: ClipboardEvent): Promise<void> {
+    if (!this.settings.enhanceDefaultPaste) {
+      return;
+    }
+
     // Only attempt fetch if online
     if (!navigator.onLine) return;
 
@@ -177,35 +229,5 @@ export default class AutoLinkTitle extends Plugin {
 
   async saveSettings() {
     await this.saveData(this.settings);
-  }
-}
-
-class AutoLinkTitleSettingTab extends PluginSettingTab {
-  plugin: AutoLinkTitle;
-
-  constructor(app: App, plugin: AutoLinkTitle) {
-    super(app, plugin);
-    this.plugin = plugin;
-  }
-
-  display(): void {
-    let { containerEl } = this;
-
-    containerEl.empty();
-
-    new Setting(containerEl)
-      .setName("Replace Selection")
-      .setDesc(
-        "Whether to replace a text selection with link and fetched title"
-      )
-      .addToggle((val) =>
-        val
-          .setValue(this.plugin.settings.shouldReplaceSelection)
-          .onChange(async (value) => {
-            console.log(value);
-            this.plugin.settings.shouldReplaceSelection = value;
-            await this.plugin.saveSettings();
-          })
-      );
   }
 }
