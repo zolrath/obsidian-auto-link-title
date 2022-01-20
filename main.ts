@@ -74,6 +74,7 @@ export default class AutoLinkTitle extends Plugin {
   // Simulate standard paste but using editor.replaceSelection with clipboard text since we can't seem to dispatch a paste event.
   async manualPasteUrlWithTitle(): Promise<void> {
     let editor = this.getEditor();
+    if (!editor) return;
 
     // Only attempt fetch if online
     if (!navigator.onLine) {
@@ -121,6 +122,8 @@ export default class AutoLinkTitle extends Plugin {
     if (!navigator.onLine) return;
 
     let editor = this.getEditor();
+    if (!editor) return;
+
     let clipboardText = clipboard.clipboardData.getData("text/plain");
     if (clipboardText == null || clipboardText == "") return;
 
@@ -214,11 +217,6 @@ export default class AutoLinkTitle extends Plugin {
 
   onunload() {
     console.log("unloading obsidian-auto-link-title");
-    this.app.workspace.containerEl.removeEventListener(
-      "paste",
-      this.pasteFunction,
-      true
-    );
   }
 
   async loadSettings() {
