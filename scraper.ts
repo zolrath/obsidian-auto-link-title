@@ -33,6 +33,7 @@ async function electronGetPageTitle(url: string): Promise<string> {
       },
       show: false,
     });
+    window.webContents.setAudioMuted(true);
 
     await load(window, url);
 
