@@ -162,7 +162,11 @@ export default class AutoLinkTitle extends Plugin {
     const pasteId = `Fetching Title#${this.createBlockHash()}`;
 
     // Instantly paste so you don't wonder if paste is broken
-    editor.replaceSelection(`[${pasteId}](${url})`);
+    if (!this.settings.htmlLink) {
+      editor.replaceSelection(`[${pasteId}](${url})`);
+    } else {
+      editor.replaceSelection(`<a href="${url}">${pasteId}</a>`);
+    }
 
     // Fetch title from site, replace Fetching Title with actual title
     const title = await this.fetchUrlTitle(url);
