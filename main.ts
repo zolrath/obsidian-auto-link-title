@@ -171,6 +171,7 @@ export default class AutoLinkTitle extends Plugin {
 
     // Fetch title from site, replace Fetching Title with actual title
     const title = await this.fetchUrlTitle(url);
+    const escapedTitle = this.escapeMarkdown(title);
 
     const text = editor.getValue();
 
@@ -184,8 +185,14 @@ export default class AutoLinkTitle extends Plugin {
       const startPos = EditorExtensions.getEditorPositionFromIndex(text, start);
       const endPos = EditorExtensions.getEditorPositionFromIndex(text, end);
 
-      editor.replaceRange(title, startPos, endPos);
+      editor.replaceRange(escapedTitle, startPos, endPos);
     }
+  }
+
+  escapeMarkdown(text: string): string {
+    var unescaped = text.replace(/\\(\*|_|`|~|\\)/g, '$1'); // unescape any "backslashed" character
+    var escaped = unescaped.replace(/(\*|_|`|~|\\)/g, '\\$1'); // escape *, _, `, ~, \
+    return escaped;
   }
 
   async fetchUrlTitle(url: string): Promise<string> {
