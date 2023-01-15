@@ -47,6 +47,7 @@ async function electronGetPageTitle(url: string): Promise<string> {
         return url;
       }
     } catch (ex) {
+      window.destroy();
       return url;
     }
   } catch (ex) {
