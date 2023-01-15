@@ -15,10 +15,13 @@ interface PasteFunction {
 export default class AutoLinkTitle extends Plugin {
   settings: AutoLinkTitleSettings;
   pasteFunction: PasteFunction;
+  blacklist: Array<string>;
 
   async onload() {
     console.log("loading obsidian-auto-link-title");
     await this.loadSettings();
+
+    this.blacklist = this.settings.websiteBlacklist.split(",").map(s => s.trim())
 
     // Listen to paste event
     this.pasteFunction = this.pasteUrlWithTitle.bind(this);
@@ -147,7 +150,17 @@ export default class AutoLinkTitle extends Plugin {
     return;
   }
 
+  isBlacklisted(url: string): boolean {
+    return this.blacklist.some(site => url.contains(site))
+  }
+
   async convertUrlToTitledLink(editor: Editor, url: string): Promise<void> {
+    if (this.isBlacklisted(url)) {
+      let domain = new URL(url).hostname;
+      editor.replaceSelection(`[${domain}](${url})`);
+      return;
+    }
+
     // Generate a unique id for find/replace operations for the title.
     const pasteId = `Fetching Title#${this.createBlockHash()}`;
 
