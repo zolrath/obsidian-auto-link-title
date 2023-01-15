@@ -26,9 +26,7 @@ export default class AutoLinkTitle extends Plugin {
     this.addCommand({
       id: "auto-link-title-paste",
       name: "Paste URL and auto fetch title",
-      callback: () => {
-        this.manualPasteUrlWithTitle();
-      },
+      editorCallback: (editor) => this.manualPasteUrlWithTitle(editor),
       hotkeys: [],
     });
 
@@ -39,7 +37,7 @@ export default class AutoLinkTitle extends Plugin {
     this.addCommand({
       id: "enhance-url-with-title",
       name: "Enhance existing URL with link and title",
-      callback: () => this.addTitleToLink(),
+      editorCallback: (editor) => this.addTitleToLink(editor),
       hotkeys: [
         {
           modifiers: ["Mod", "Shift"],
@@ -51,12 +49,9 @@ export default class AutoLinkTitle extends Plugin {
     this.addSettingTab(new AutoLinkTitleSettingTab(this.app, this));
   }
 
-  addTitleToLink(): void {
+  addTitleToLink(editor: Editor): void {
     // Only attempt fetch if online
     if (!navigator.onLine) return;
-
-    let editor = this.getEditor();
-    if (editor == null) return;
 
     let selectedText = (EditorExtensions.getSelectedText(editor) || "").trim();
 
@@ -72,9 +67,7 @@ export default class AutoLinkTitle extends Plugin {
   }
 
   // Simulate standard paste but using editor.replaceSelection with clipboard text since we can't seem to dispatch a paste event.
-  async manualPasteUrlWithTitle(): Promise<void> {
-    let editor = this.getEditor();
-    if (!editor) return;
+  async manualPasteUrlWithTitle(editor: Editor): Promise<void> {
 
     // Only attempt fetch if online
     if (!navigator.onLine) {
@@ -113,7 +106,7 @@ export default class AutoLinkTitle extends Plugin {
     return;
   }
 
-  async pasteUrlWithTitle(clipboard: ClipboardEvent): Promise<void> {
+  async pasteUrlWithTitle(clipboard: ClipboardEvent, editor: Editor): Promise<void> {
     if (!this.settings.enhanceDefaultPaste) {
       return;
     }
@@ -121,11 +114,8 @@ export default class AutoLinkTitle extends Plugin {
     // Only attempt fetch if online
     if (!navigator.onLine) return;
 
-    let editor = this.getEditor();
-    if (!editor) return;
-
     let clipboardText = clipboard.clipboardData.getData("text/plain");
-    if (clipboardText == null || clipboardText == "") return;
+    if (clipboardText === null || clipboardText === "") return;
 
     // If its not a URL, we return false to allow the default paste handler to take care of it.
     // Similarly, image urls don't have a meaningful <title> attribute so downloading it
@@ -191,12 +181,6 @@ export default class AutoLinkTitle extends Plugin {
       // console.error(error)
       return "Site Unreachable";
     }
-  }
-
-  private getEditor(): Editor {
-    let activeLeaf = this.app.workspace.getActiveViewOfType(MarkdownView);
-    if (activeLeaf == null) return;
-    return activeLeaf.editor;
   }
 
   public getUrlFromLink(link: string): string {
