@@ -33,6 +33,18 @@ export default class AutoLinkTitle extends Plugin {
       hotkeys: [],
     });
 
+    this.addCommand({
+      id: "auto-link-title-normal-paste",
+      name: "Normal paste (no fetching behavior)",
+      editorCallback: (editor) => this.normalPaste(editor),
+      hotkeys: [
+        {
+          modifiers: ["Mod", "Shift"],
+          key: "v",
+        },
+      ],
+    });
+
     this.registerEvent(
       this.app.workspace.on("editor-paste", this.pasteFunction)
     );
@@ -67,6 +79,14 @@ export default class AutoLinkTitle extends Plugin {
       var link = this.getUrlFromLink(selectedText);
       this.convertUrlToTitledLink(editor, link);
     }
+  }
+
+  async normalPaste(editor: Editor): Promise<void> {
+
+    let clipboardText = await navigator.clipboard.readText();
+    if (clipboardText === null || clipboardText === "") return;
+
+    editor.replaceSelection(clipboardText);
   }
 
   // Simulate standard paste but using editor.replaceSelection with clipboard text since we can't seem to dispatch a paste event.
