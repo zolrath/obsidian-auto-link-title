@@ -21,7 +21,7 @@ export default class AutoLinkTitle extends Plugin {
     console.log("loading obsidian-auto-link-title");
     await this.loadSettings();
 
-    this.blacklist = this.settings.websiteBlacklist.split(",").map(s => s.trim())
+    this.blacklist = this.settings.websiteBlacklist.split(",").map(s => s.trim()).filter(s => s.length > 0)
 
     // Listen to paste event
     this.pasteFunction = this.pasteUrlWithTitle.bind(this);
@@ -150,12 +150,14 @@ export default class AutoLinkTitle extends Plugin {
     return;
   }
 
-  isBlacklisted(url: string): boolean {
+  async isBlacklisted(url: string): Promise<boolean> {
+    await this.loadSettings();
+    this.blacklist = this.settings.websiteBlacklist.split(/,|\n/).map(s => s.trim()).filter(s => s.length > 0)
     return this.blacklist.some(site => url.contains(site))
   }
 
   async convertUrlToTitledLink(editor: Editor, url: string): Promise<void> {
-    if (this.isBlacklisted(url)) {
+    if (await this.isBlacklisted(url)) {
       let domain = new URL(url).hostname;
       editor.replaceSelection(`[${domain}](${url})`);
       return;
