@@ -82,10 +82,32 @@ async function nonElectronGetPageTitle(url: string): Promise<string> {
   }
 }
 
+function getUrlFinalSegment(url: string): string {
+  try {
+    const segments = new URL(url).pathname.split('/');
+    const last = segments.pop() || segments.pop(); // Handle potential trailing slash
+    return last;
+  } catch (_) {
+    return "File"
+  }
+}
+
 export default async function getPageTitle(url: string): Promise<string> {
   // If we're on Desktop use the Electron scraper
   if (!(url.startsWith("http") || url.startsWith("https"))) {
     url = "https://" + url;
+  }
+  const response = await fetch(url, { method: "HEAD" });
+
+  // Ensure site returns an ok status code before scraping
+  if (!response.ok) {
+    return "Site Unreachable";
+  }
+
+  // Ensure site is an actual HTML page and not a pdf or 3 gigabyte video file.
+  let contentType = response.headers.get("content-type");
+  if (!contentType.includes("text/html")) {
+    return getUrlFinalSegment(url);
   }
 
   if (electronPkg != null) {
