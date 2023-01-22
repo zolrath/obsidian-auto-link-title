@@ -92,22 +92,37 @@ function getUrlFinalSegment(url: string): string {
   }
 }
 
+async function tryGetFileType(url: string) {
+  try {
+    const response = await fetch(url, { method: "HEAD" });
+
+    // Ensure site returns an ok status code before scraping
+    if (!response.ok) {
+      return "Site Unreachable";
+    }
+
+    // Ensure site is an actual HTML page and not a pdf or 3 gigabyte video file.
+    let contentType = response.headers.get("content-type");
+    if (!contentType.includes("text/html")) {
+      return getUrlFinalSegment(url);
+    }
+    return null;
+  } catch (err) {
+    return null;
+  }
+}
+
 export default async function getPageTitle(url: string): Promise<string> {
   // If we're on Desktop use the Electron scraper
   if (!(url.startsWith("http") || url.startsWith("https"))) {
     url = "https://" + url;
   }
-  const response = await fetch(url, { method: "HEAD" });
 
-  // Ensure site returns an ok status code before scraping
-  if (!response.ok) {
-    return "Site Unreachable";
-  }
-
-  // Ensure site is an actual HTML page and not a pdf or 3 gigabyte video file.
-  let contentType = response.headers.get("content-type");
-  if (!contentType.includes("text/html")) {
-    return getUrlFinalSegment(url);
+  // Try to do a HEAD request to see if the site is reachable and if it's an HTML page
+  // If we error out due to CORS, we'll just try to scrape the page anyway.
+  let fileType = await tryGetFileType(url);
+  if (fileType) {
+    return fileType;
   }
 
   if (electronPkg != null) {
