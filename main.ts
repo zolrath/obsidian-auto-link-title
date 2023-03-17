@@ -210,8 +210,8 @@ export default class AutoLinkTitle extends Plugin {
   }
 
   escapeMarkdown(text: string): string {
-    var unescaped = text.replace(/\\(\*|_|`|~|\\)/g, '$1'); // unescape any "backslashed" character
-    var escaped = unescaped.replace(/(\*|_|`|~|\\)/g, '\\$1'); // escape *, _, `, ~, \
+    var unescaped = text.replace(/\\(\*|_|`|~|\\|\[|\])/g, '$1'); // unescape any "backslashed" character
+    var escaped = unescaped.replace(/(\*|_|`|~|\\|\[|\])/g, '\\$1'); // escape *, _, `, ~, \, [, ]
     return escaped;
   }
 
