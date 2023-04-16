@@ -192,6 +192,7 @@ export default class AutoLinkTitle extends Plugin {
     // Fetch title from site, replace Fetching Title with actual title
     const title = await this.fetchUrlTitle(url);
     const escapedTitle = this.escapeMarkdown(title);
+    const shortenedTitle = this.shortTitle(escapedTitle)
 
     const text = editor.getValue();
 
@@ -205,7 +206,7 @@ export default class AutoLinkTitle extends Plugin {
       const startPos = EditorExtensions.getEditorPositionFromIndex(text, start);
       const endPos = EditorExtensions.getEditorPositionFromIndex(text, end);
 
-      editor.replaceRange(escapedTitle, startPos, endPos);
+      editor.replaceRange(shortenedTitle, startPos, endPos);
     }
   }
 
@@ -213,6 +214,17 @@ export default class AutoLinkTitle extends Plugin {
     var unescaped = text.replace(/\\(\*|_|`|~|\\|\[|\])/g, '$1'); // unescape any "backslashed" character
     var escaped = unescaped.replace(/(\*|_|`|~|\\|\[|\])/g, '\\$1'); // escape *, _, `, ~, \, [, ]
     return escaped;
+  }
+
+  public shortTitle = (title:string):string =>{
+    if (this.settings.maximumTitleLength === 0){
+      return title
+    }
+    if (title.length < this.settings.maximumTitleLength + 3){
+      return title
+    }
+    const shortenedTitle = `${title.slice(0,this.settings.maximumTitleLength+1)}...`
+    return shortenedTitle
   }
 
   async fetchUrlTitle(url: string): Promise<string> {

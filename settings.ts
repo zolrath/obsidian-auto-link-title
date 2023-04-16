@@ -10,6 +10,7 @@ export interface AutoLinkTitleSettings {
   shouldReplaceSelection: boolean;
   enhanceDefaultPaste: boolean;
   websiteBlacklist: string;
+  maximumTitleLength:number;
 }
 
 export const DEFAULT_SETTINGS: AutoLinkTitleSettings = {
@@ -25,6 +26,7 @@ export const DEFAULT_SETTINGS: AutoLinkTitleSettings = {
   shouldReplaceSelection: true,
   enhanceDefaultPaste: true,
   websiteBlacklist: "",
+  maximumTitleLength:0,
 };
 
 export class AutoLinkTitleSettingTab extends PluginSettingTab {
@@ -54,6 +56,21 @@ export class AutoLinkTitleSettingTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           })
       );
+
+    new Setting(containerEl)
+      .setName("Maximum title length")
+      .setDesc(
+          "Set the maximum length of the header. Set to 0 to disable."
+      )
+      .addText((val) =>
+          val
+              .setValue(this.plugin.settings.maximumTitleLength.toString(10))
+              .onChange(async (value) => {
+                  const titleLength = (Number(value))
+                  this.plugin.settings.maximumTitleLength = isNaN(titleLength) || titleLength < 0  ? 0 : titleLength;
+                  await this.plugin.saveSettings();
+              })
+      )
 
     new Setting(containerEl)
       .setName("Replace Selection")
