@@ -10,15 +10,15 @@ function notBlank(text: string): boolean {
 }
 
 // async wrapper to load a url and settle on load finish or fail
-async function load(window: any, url: string): Promise<void> {
+async function load(window: any, url: string, extraWaitingTime: number): Promise<void> {
   return new Promise<void>((resolve, reject) => {
-    window.webContents.on("did-finish-load", (event: any) => resolve(event));
+    window.webContents.on("did-finish-load", (event: any) => setTimeout(_ => resolve(event), extraWaitingTime));
     window.webContents.on("did-fail-load", (event: any) => reject(event));
     window.loadURL(url);
   });
 }
 
-async function electronGetPageTitle(url: string): Promise<string> {
+async function electronGetPageTitle(url: string, extraWaitingTime: number): Promise<string> {
   const { remote } = electronPkg;
   const { BrowserWindow } = remote;
 
@@ -35,7 +35,7 @@ async function electronGetPageTitle(url: string): Promise<string> {
     });
     window.webContents.setAudioMuted(true);
 
-    await load(window, url);
+    await load(window, url, extraWaitingTime);
 
     try {
       const title = window.webContents.getTitle();
@@ -112,7 +112,7 @@ async function tryGetFileType(url: string) {
   }
 }
 
-export default async function getPageTitle(url: string): Promise<string> {
+export default async function getPageTitle(url: string, extraWaitingTime: number): Promise<string> {
   // If we're on Desktop use the Electron scraper
   if (!(url.startsWith("http") || url.startsWith("https"))) {
     url = "https://" + url;
@@ -126,7 +126,7 @@ export default async function getPageTitle(url: string): Promise<string> {
   }
 
   if (electronPkg != null) {
-    return electronGetPageTitle(url);
+    return electronGetPageTitle(url, extraWaitingTime);
   } else {
     return nonElectronGetPageTitle(url);
   }

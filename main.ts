@@ -217,7 +217,7 @@ export default class AutoLinkTitle extends Plugin {
 
   async fetchUrlTitle(url: string): Promise<string> {
     try {
-      const title = await getPageTitle(url);
+      const title = await getPageTitle(url, this.settings.extraWaitingTime);
       return title.replace(/(\r\n|\n|\r)/gm, "").trim();
     } catch (error) {
       // console.error(error)

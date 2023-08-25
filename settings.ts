@@ -10,6 +10,7 @@ export interface AutoLinkTitleSettings {
   shouldReplaceSelection: boolean;
   enhanceDefaultPaste: boolean;
   websiteBlacklist: string;
+  extraWaitingTime: number;
 }
 
 export const DEFAULT_SETTINGS: AutoLinkTitleSettings = {
@@ -25,6 +26,7 @@ export const DEFAULT_SETTINGS: AutoLinkTitleSettings = {
   shouldReplaceSelection: true,
   enhanceDefaultPaste: true,
   websiteBlacklist: "",
+  extraWaitingTime: 1000
 };
 
 export class AutoLinkTitleSettingTab extends PluginSettingTab {
@@ -81,6 +83,20 @@ export class AutoLinkTitleSettingTab extends PluginSettingTab {
           .setPlaceholder("localhost, tiktok.com")
           .onChange(async (value) => {
             this.plugin.settings.websiteBlacklist = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Extra Waiting Time")
+      .setDesc("Extra time to wait for the page to update the title. Increase this if you're getting a lot of URL or 'Site Unreachable' titles.")
+      .addText((val) =>
+        val
+          .setValue(this.plugin.settings.extraWaitingTime?.toString())
+          .setPlaceholder(DEFAULT_SETTINGS.extraWaitingTime.toString())
+          .onChange(async (value) => {
+            const valueAsNumber = parseInt(value);
+            this.plugin.settings.extraWaitingTime = isNaN(valueAsNumber) || valueAsNumber === undefined || valueAsNumber < -1 ? DEFAULT_SETTINGS.extraWaitingTime : valueAsNumber;
             await this.plugin.saveSettings();
           })
       );
