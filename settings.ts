@@ -10,6 +10,7 @@ export interface AutoLinkTitleSettings {
   shouldReplaceSelection: boolean;
   enhanceDefaultPaste: boolean;
   htmlLink: boolean;
+  websiteBlacklist: string;
 }
 
 export const DEFAULT_SETTINGS: AutoLinkTitleSettings = {
@@ -25,6 +26,7 @@ export const DEFAULT_SETTINGS: AutoLinkTitleSettings = {
   shouldReplaceSelection: true,
   enhanceDefaultPaste: true,
   htmlLink: false,
+  websiteBlacklist: "",
 };
 
 export class AutoLinkTitleSettingTab extends PluginSettingTab {
@@ -81,6 +83,21 @@ export class AutoLinkTitleSettingTab extends PluginSettingTab {
           .onChange(async (value) => {
             console.log(value);
             this.plugin.settings.shouldReplaceSelection = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Website Blacklist")
+      .setDesc(
+        "List of strings (comma separated) that disable autocompleting website titles. Can be URLs or arbitrary text."
+      )
+      .addTextArea((val) =>
+        val
+          .setValue(this.plugin.settings.websiteBlacklist)
+          .setPlaceholder("localhost, tiktok.com")
+          .onChange(async (value) => {
+            this.plugin.settings.websiteBlacklist = value;
             await this.plugin.saveSettings();
           })
       );

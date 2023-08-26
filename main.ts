@@ -15,10 +15,13 @@ interface PasteFunction {
 export default class AutoLinkTitle extends Plugin {
   settings: AutoLinkTitleSettings;
   pasteFunction: PasteFunction;
+  blacklist: Array<string>;
 
   async onload() {
     console.log("loading obsidian-auto-link-title");
     await this.loadSettings();
+
+    this.blacklist = this.settings.websiteBlacklist.split(",").map(s => s.trim()).filter(s => s.length > 0)
 
     // Listen to paste event
     this.pasteFunction = this.pasteUrlWithTitle.bind(this);
@@ -26,10 +29,20 @@ export default class AutoLinkTitle extends Plugin {
     this.addCommand({
       id: "auto-link-title-paste",
       name: "Paste URL and auto fetch title",
-      callback: () => {
-        this.manualPasteUrlWithTitle();
-      },
+      editorCallback: (editor) => this.manualPasteUrlWithTitle(editor),
       hotkeys: [],
+    });
+
+    this.addCommand({
+      id: "auto-link-title-normal-paste",
+      name: "Normal paste (no fetching behavior)",
+      editorCallback: (editor) => this.normalPaste(editor),
+      hotkeys: [
+        {
+          modifiers: ["Mod", "Shift"],
+          key: "v",
+        },
+      ],
     });
 
     this.registerEvent(
@@ -39,7 +52,7 @@ export default class AutoLinkTitle extends Plugin {
     this.addCommand({
       id: "enhance-url-with-title",
       name: "Enhance existing URL with link and title",
-      callback: () => this.addTitleToLink(),
+      editorCallback: (editor) => this.addTitleToLink(editor),
       hotkeys: [
         {
           modifiers: ["Mod", "Shift"],
@@ -51,12 +64,9 @@ export default class AutoLinkTitle extends Plugin {
     this.addSettingTab(new AutoLinkTitleSettingTab(this.app, this));
   }
 
-  addTitleToLink(): void {
+  addTitleToLink(editor: Editor): void {
     // Only attempt fetch if online
     if (!navigator.onLine) return;
-
-    let editor = this.getEditor();
-    if (editor == null) return;
 
     let selectedText = (EditorExtensions.getSelectedText(editor) || "").trim();
 
@@ -71,10 +81,16 @@ export default class AutoLinkTitle extends Plugin {
     }
   }
 
+  async normalPaste(editor: Editor): Promise<void> {
+
+    let clipboardText = await navigator.clipboard.readText();
+    if (clipboardText === null || clipboardText === "") return;
+
+    editor.replaceSelection(clipboardText);
+  }
+
   // Simulate standard paste but using editor.replaceSelection with clipboard text since we can't seem to dispatch a paste event.
-  async manualPasteUrlWithTitle(): Promise<void> {
-    let editor = this.getEditor();
-    if (!editor) return;
+  async manualPasteUrlWithTitle(editor: Editor): Promise<void> {
 
     // Only attempt fetch if online
     if (!navigator.onLine) {
@@ -113,7 +129,7 @@ export default class AutoLinkTitle extends Plugin {
     return;
   }
 
-  async pasteUrlWithTitle(clipboard: ClipboardEvent): Promise<void> {
+  async pasteUrlWithTitle(clipboard: ClipboardEvent, editor: Editor): Promise<void> {
     if (!this.settings.enhanceDefaultPaste) {
       return;
     }
@@ -121,11 +137,8 @@ export default class AutoLinkTitle extends Plugin {
     // Only attempt fetch if online
     if (!navigator.onLine) return;
 
-    let editor = this.getEditor();
-    if (!editor) return;
-
     let clipboardText = clipboard.clipboardData.getData("text/plain");
-    if (clipboardText == null || clipboardText == "") return;
+    if (clipboardText === null || clipboardText === "") return;
 
     // If its not a URL, we return false to allow the default paste handler to take care of it.
     // Similarly, image urls don't have a meaningful <title> attribute so downloading it
@@ -157,7 +170,19 @@ export default class AutoLinkTitle extends Plugin {
     return;
   }
 
+  async isBlacklisted(url: string): Promise<boolean> {
+    await this.loadSettings();
+    this.blacklist = this.settings.websiteBlacklist.split(/,|\n/).map(s => s.trim()).filter(s => s.length > 0)
+    return this.blacklist.some(site => url.contains(site))
+  }
+
   async convertUrlToTitledLink(editor: Editor, url: string): Promise<void> {
+    if (await this.isBlacklisted(url)) {
+      let domain = new URL(url).hostname;
+      editor.replaceSelection(`[${domain}](${url})`);
+      return;
+    }
+
     // Generate a unique id for find/replace operations for the title.
     const pasteId = `Fetching Title#${this.createBlockHash()}`;
 
@@ -170,6 +195,7 @@ export default class AutoLinkTitle extends Plugin {
 
     // Fetch title from site, replace Fetching Title with actual title
     const title = await this.fetchUrlTitle(url);
+    const escapedTitle = this.escapeMarkdown(title);
 
     const text = editor.getValue();
 
@@ -183,8 +209,14 @@ export default class AutoLinkTitle extends Plugin {
       const startPos = EditorExtensions.getEditorPositionFromIndex(text, start);
       const endPos = EditorExtensions.getEditorPositionFromIndex(text, end);
 
-      editor.replaceRange(title, startPos, endPos);
+      editor.replaceRange(escapedTitle, startPos, endPos);
     }
+  }
+
+  escapeMarkdown(text: string): string {
+    var unescaped = text.replace(/\\(\*|_|`|~|\\|\[|\])/g, '$1'); // unescape any "backslashed" character
+    var escaped = unescaped.replace(/(\*|_|`|~|\\|\[|\])/g, '\\$1'); // escape *, _, `, ~, \, [, ]
+    return escaped;
   }
 
   async fetchUrlTitle(url: string): Promise<string> {
@@ -195,12 +227,6 @@ export default class AutoLinkTitle extends Plugin {
       // console.error(error)
       return "Site Unreachable";
     }
-  }
-
-  private getEditor(): Editor {
-    let activeLeaf = this.app.workspace.getActiveViewOfType(MarkdownView);
-    if (activeLeaf == null) return;
-    return activeLeaf.editor;
   }
 
   public getUrlFromLink(link: string): string {
