@@ -9,6 +9,7 @@ export interface AutoLinkTitleSettings {
   imageRegex: RegExp;
   shouldReplaceSelection: boolean;
   enhanceDefaultPaste: boolean;
+  htmlLink: boolean;
   websiteBlacklist: string;
 }
 
@@ -24,6 +25,7 @@ export const DEFAULT_SETTINGS: AutoLinkTitleSettings = {
   imageRegex: /\.(gif|jpe?g|tiff?|png|webp|bmp|tga|psd|ai)$/i,
   shouldReplaceSelection: true,
   enhanceDefaultPaste: true,
+  htmlLink: false,
   websiteBlacklist: "",
 };
 
@@ -51,6 +53,21 @@ export class AutoLinkTitleSettingTab extends PluginSettingTab {
           .onChange(async (value) => {
             console.log(value);
             this.plugin.settings.enhanceDefaultPaste = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Use HTML Links")
+      .setDesc(
+        "Use an html <a> tag instead of markdown style []() links"
+      )
+      .addToggle((val) =>
+        val
+          .setValue(this.plugin.settings.htmlLink)
+          .onChange(async (value) => {
+            console.log(value);
+            this.plugin.settings.htmlLink = value;
             await this.plugin.saveSettings();
           })
       );
