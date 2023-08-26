@@ -195,7 +195,13 @@ export default class AutoLinkTitle extends Plugin {
 
     // Fetch title from site, replace Fetching Title with actual title
     const title = await this.fetchUrlTitle(url);
-    const escapedTitle = this.escapeMarkdown(title);
+
+    let escapedTitle;
+    if (this.settings.htmlLink) {
+      escapedTitle = this.escapeHTML(title);
+    } else {
+      escapedTitle = this.escapeMarkdown(title);
+    }
 
     const text = editor.getValue();
 
@@ -211,6 +217,10 @@ export default class AutoLinkTitle extends Plugin {
 
       editor.replaceRange(escapedTitle, startPos, endPos);
     }
+  }
+
+  escapeHTML(text: string): string {
+    return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
 
   escapeMarkdown(text: string): string {
