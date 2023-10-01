@@ -1,5 +1,5 @@
 const electronPkg = require("electron");
-import { request } from "obsidian";
+import { request, requestUrl } from "obsidian";
 
 function blank(text: string): boolean {
   return text === undefined || text === null || text === "";
@@ -94,15 +94,15 @@ function getUrlFinalSegment(url: string): string {
 
 async function tryGetFileType(url: string) {
   try {
-    const response = await fetch(url, { method: "HEAD" });
+    const response = await requestUrl({ url, method: "HEAD" });
 
     // Ensure site returns an ok status code before scraping
-    if (!response.ok) {
+    if (response.status < 199 || response.status > 299) {
       return "Site Unreachable";
     }
 
     // Ensure site is an actual HTML page and not a pdf or 3 gigabyte video file.
-    let contentType = response.headers.get("content-type");
+    let contentType = response.headers["content-type"];
     if (!contentType.includes("text/html")) {
       return getUrlFinalSegment(url);
     }
