@@ -1,12 +1,13 @@
-import { EditorExtensions } from "editor-enhancements";
-import { Plugin, MarkdownView, Editor } from "obsidian";
+import { CheckIf } from "checkif"
+import { EditorExtensions } from "editor-enhancements"
+import { Editor, Plugin } from "obsidian"
+import getPageTitle from "scraper"
 import {
-  AutoLinkTitleSettings,
   AutoLinkTitleSettingTab,
+  AutoLinkTitleSettings,
   DEFAULT_SETTINGS,
-} from "./settings";
-import { CheckIf } from "checkif";
-import getPageTitle from "scraper";
+} from "./settings"
+import { randomBytes } from 'crypto'
 
 interface PasteFunction {
   (this: HTMLElement, ev: ClipboardEvent): void;
