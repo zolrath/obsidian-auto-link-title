@@ -230,15 +230,8 @@ export default class AutoLinkTitle extends Plugin {
     return urlRegex.exec(link)[2];
   }
 
-  // Custom hashid by @shabegom
   private createBlockHash(): string {
-    let result = "";
-    var characters = "abcdefghijklmnopqrstuvwxyz0123456789";
-    var charactersLength = characters.length;
-    for (var i = 0; i < 4; i++) {
-      result += characters.charAt(Math.floor(Math.random() * charactersLength));
-    }
-    return result;
+    return randomBytes(6).toString('hex')
   }
 
   onunload() {
