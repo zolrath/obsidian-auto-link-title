@@ -76,8 +76,8 @@ export default class AutoLinkTitle extends Plugin {
     }
     // If the cursor is on the URL part of a markdown link, fetch title and replace existing link title
     else if (CheckIf.isLinkedUrl(selectedText)) {
-      var link = this.getUrlFromLink(selectedText);
-      this.convertUrlToTitledLink(editor, link);
+      const link = this.getUrlFromLink(selectedText)
+      this.convertUrlToTitledLink(editor, link)
     }
   }
 
@@ -91,6 +91,7 @@ export default class AutoLinkTitle extends Plugin {
 
   // Simulate standard paste but using editor.replaceSelection with clipboard text since we can't seem to dispatch a paste event.
   async manualPasteUrlWithTitle(editor: Editor): Promise<void> {
+    const clipboardText = await navigator.clipboard.readText()
 
     // Only attempt fetch if online
     if (!navigator.onLine) {
@@ -98,8 +99,7 @@ export default class AutoLinkTitle extends Plugin {
       return;
     }
 
-    var clipboardText = await navigator.clipboard.readText();
-    if (clipboardText == null || clipboardText == "") return;
+    if (clipboardText == null || clipboardText == '') return
 
     // If its not a URL, we return false to allow the default paste handler to take care of it.
     // Similarly, image urls don't have a meaningful <title> attribute so downloading it
