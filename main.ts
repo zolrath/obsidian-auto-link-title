@@ -220,8 +220,8 @@ export default class AutoLinkTitle extends Plugin {
       const title = await getPageTitle(url);
       return title.replace(/(\r\n|\n|\r)/gm, "").trim();
     } catch (error) {
-      // console.error(error)
-      return "Site Unreachable";
+      console.error(error)
+      return 'Error fetching title'
     }
   }
 
