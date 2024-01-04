@@ -1,12 +1,13 @@
-import { EditorExtensions } from "editor-enhancements";
-import { Plugin, MarkdownView, Editor } from "obsidian";
+import { CheckIf } from "checkif"
+import { EditorExtensions } from "editor-enhancements"
+import { Editor, Plugin } from "obsidian"
+import getPageTitle from "scraper"
 import {
-  AutoLinkTitleSettings,
   AutoLinkTitleSettingTab,
+  AutoLinkTitleSettings,
   DEFAULT_SETTINGS,
-} from "./settings";
-import { CheckIf } from "checkif";
-import getPageTitle from "scraper";
+} from "./settings"
+import { randomBytes } from 'crypto'
 
 interface PasteFunction {
   (this: HTMLElement, ev: ClipboardEvent): void;
@@ -76,8 +77,8 @@ export default class AutoLinkTitle extends Plugin {
     }
     // If the cursor is on the URL part of a markdown link, fetch title and replace existing link title
     else if (CheckIf.isLinkedUrl(selectedText)) {
-      var link = this.getUrlFromLink(selectedText);
-      this.convertUrlToTitledLink(editor, link);
+      const link = this.getUrlFromLink(selectedText)
+      this.convertUrlToTitledLink(editor, link)
     }
   }
 
@@ -91,6 +92,7 @@ export default class AutoLinkTitle extends Plugin {
 
   // Simulate standard paste but using editor.replaceSelection with clipboard text since we can't seem to dispatch a paste event.
   async manualPasteUrlWithTitle(editor: Editor): Promise<void> {
+    const clipboardText = await navigator.clipboard.readText()
 
     // Only attempt fetch if online
     if (!navigator.onLine) {
@@ -98,8 +100,7 @@ export default class AutoLinkTitle extends Plugin {
       return;
     }
 
-    var clipboardText = await navigator.clipboard.readText();
-    if (clipboardText == null || clipboardText == "") return;
+    if (clipboardText == null || clipboardText == '') return
 
     // If its not a URL, we return false to allow the default paste handler to take care of it.
     // Similarly, image urls don't have a meaningful <title> attribute so downloading it
@@ -220,8 +221,8 @@ export default class AutoLinkTitle extends Plugin {
       const title = await getPageTitle(url);
       return title.replace(/(\r\n|\n|\r)/gm, "").trim();
     } catch (error) {
-      // console.error(error)
-      return "Site Unreachable";
+      console.error(error)
+      return 'Error fetching title'
     }
   }
 
@@ -230,15 +231,8 @@ export default class AutoLinkTitle extends Plugin {
     return urlRegex.exec(link)[2];
   }
 
-  // Custom hashid by @shabegom
   private createBlockHash(): string {
-    let result = "";
-    var characters = "abcdefghijklmnopqrstuvwxyz0123456789";
-    var charactersLength = characters.length;
-    for (var i = 0; i < 4; i++) {
-      result += characters.charAt(Math.floor(Math.random() * charactersLength));
-    }
-    return result;
+    return randomBytes(6).toString('hex')
   }
 
   onunload() {
