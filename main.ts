@@ -216,14 +216,14 @@ export default class AutoLinkTitle extends Plugin {
     return escaped;
   }
 
-  public shortTitle = (title:string):string =>{
-    if (this.settings.maximumTitleLength === 0){
+  public shortTitle = (title: string): string =>{
+    if (this.settings.maximumTitleLength === 0) {
       return title
     }
-    if (title.length < this.settings.maximumTitleLength + 3){
+    if (title.length < this.settings.maximumTitleLength + 3) {
       return title
     }
-    const shortenedTitle = `${title.slice(0,this.settings.maximumTitleLength+1)}...`
+    const shortenedTitle = `${title.slice(0, this.settings.maximumTitleLength)}...`
     return shortenedTitle
   }
 
