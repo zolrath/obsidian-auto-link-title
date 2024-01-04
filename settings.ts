@@ -26,7 +26,7 @@ export const DEFAULT_SETTINGS: AutoLinkTitleSettings = {
   shouldReplaceSelection: true,
   enhanceDefaultPaste: true,
   websiteBlacklist: "",
-  extraWaitingTime: 1000
+  extraWaitingTime: 150
 };
 
 export class AutoLinkTitleSettingTab extends PluginSettingTab {
@@ -89,7 +89,7 @@ export class AutoLinkTitleSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Extra Waiting Time")
-      .setDesc("Extra time to wait for the page to update the title. Increase this if you're getting a lot of URL or 'Site Unreachable' titles.")
+      .setDesc("Extra time to wait for the page to update the title in milliseconds. Increase this if you're getting a lot of URL or 'Site Unreachable' titles.")
       .addText((val) =>
         val
           .setValue(this.plugin.settings.extraWaitingTime?.toString())
