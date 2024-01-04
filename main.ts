@@ -22,7 +22,7 @@ export default class AutoLinkTitle extends Plugin {
     console.log("loading obsidian-auto-link-title");
     await this.loadSettings();
 
-    this.blacklist = this.settings.websiteBlacklist.split(",").map(s => s.trim()).filter(s => s.length > 0)
+    this.blacklist = this.settings.websiteBlacklist.split(",").map(s => s.trim()).filter(s => s.length > 0);
 
     // Listen to paste event
     this.pasteFunction = this.pasteUrlWithTitle.bind(this);
@@ -193,6 +193,7 @@ export default class AutoLinkTitle extends Plugin {
     // Fetch title from site, replace Fetching Title with actual title
     const title = await this.fetchUrlTitle(url);
     const escapedTitle = this.escapeMarkdown(title);
+    const shortenedTitle = this.shortTitle(escapedTitle);
 
     const text = editor.getValue();
 
@@ -206,7 +207,7 @@ export default class AutoLinkTitle extends Plugin {
       const startPos = EditorExtensions.getEditorPositionFromIndex(text, start);
       const endPos = EditorExtensions.getEditorPositionFromIndex(text, end);
 
-      editor.replaceRange(escapedTitle, startPos, endPos);
+      editor.replaceRange(shortenedTitle, startPos, endPos);
     }
   }
 
@@ -214,6 +215,17 @@ export default class AutoLinkTitle extends Plugin {
     var unescaped = text.replace(/\\(\*|_|`|~|\\|\[|\])/g, '$1') // unescape any "backslashed" character
     var escaped = unescaped.replace(/(\*|_|`|<|>|~|\\|\[|\])/g, '\\$1') // escape *, _, `, ~, \, [, ], <, and >
     return escaped
+  }
+
+  public shortTitle = (title: string): string =>{
+    if (this.settings.maximumTitleLength === 0) {
+      return title;
+    }
+    if (title.length < this.settings.maximumTitleLength + 3) {
+      return title;
+    }
+    const shortenedTitle = `${title.slice(0, this.settings.maximumTitleLength)}...`;
+    return shortenedTitle;
   }
 
   async fetchUrlTitle(url: string): Promise<string> {
