@@ -21,7 +21,7 @@ export default class AutoLinkTitle extends Plugin {
     console.log("loading obsidian-auto-link-title");
     await this.loadSettings();
 
-    this.blacklist = this.settings.websiteBlacklist.split(",").map(s => s.trim()).filter(s => s.length > 0)
+    this.blacklist = this.settings.websiteBlacklist.split(",").map(s => s.trim()).filter(s => s.length > 0);
 
     // Listen to paste event
     this.pasteFunction = this.pasteUrlWithTitle.bind(this);
@@ -192,7 +192,7 @@ export default class AutoLinkTitle extends Plugin {
     // Fetch title from site, replace Fetching Title with actual title
     const title = await this.fetchUrlTitle(url);
     const escapedTitle = this.escapeMarkdown(title);
-    const shortenedTitle = this.shortTitle(escapedTitle)
+    const shortenedTitle = this.shortTitle(escapedTitle);
 
     const text = editor.getValue();
 
@@ -218,13 +218,13 @@ export default class AutoLinkTitle extends Plugin {
 
   public shortTitle = (title: string): string =>{
     if (this.settings.maximumTitleLength === 0) {
-      return title
+      return title;
     }
     if (title.length < this.settings.maximumTitleLength + 3) {
-      return title
+      return title;
     }
-    const shortenedTitle = `${title.slice(0, this.settings.maximumTitleLength)}...`
-    return shortenedTitle
+    const shortenedTitle = `${title.slice(0, this.settings.maximumTitleLength)}...`;
+    return shortenedTitle;
   }
 
   async fetchUrlTitle(url: string): Promise<string> {
