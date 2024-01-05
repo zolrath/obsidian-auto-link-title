@@ -174,7 +174,7 @@ export default class AutoLinkTitle extends Plugin {
   async isBlacklisted(url: string): Promise<boolean> {
     await this.loadSettings();
     this.blacklist = this.settings.websiteBlacklist.split(/,|\n/).map(s => s.trim()).filter(s => s.length > 0)
-    return this.blacklist.some(site => url.contains(site))
+    return this.blacklist.some(site => url.includes(site))
   }
 
   async convertUrlToTitledLink(editor: Editor, url: string): Promise<void> {
@@ -217,7 +217,7 @@ export default class AutoLinkTitle extends Plugin {
     return escaped
   }
 
-  public shortTitle = (title: string): string =>{
+  public shortTitle = (title: string): string => {
     if (this.settings.maximumTitleLength === 0) {
       return title;
     }
