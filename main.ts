@@ -2,6 +2,7 @@ import { CheckIf } from "checkif"
 import { EditorExtensions } from "editor-enhancements"
 import { Editor, Plugin } from "obsidian"
 import getPageTitle from "scraper"
+import getElectronPageTitle from "electron-scraper"
 import {
   AutoLinkTitleSettingTab,
   AutoLinkTitleSettings,
@@ -230,7 +231,12 @@ export default class AutoLinkTitle extends Plugin {
 
   async fetchUrlTitle(url: string): Promise<string> {
     try {
-      const title = await getPageTitle(url);
+      let title = "";
+      if (this.settings.useNewScraper) {
+        title = await getPageTitle(url);
+      } else {
+        title = await getElectronPageTitle(url);
+      }
       return title.replace(/(\r\n|\n|\r)/gm, "").trim();
     } catch (error) {
       console.error(error)

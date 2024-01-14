@@ -11,6 +11,7 @@ export interface AutoLinkTitleSettings {
   enhanceDefaultPaste: boolean;
   websiteBlacklist: string;
   maximumTitleLength: number;
+  useNewScraper: boolean;
 }
 
 export const DEFAULT_SETTINGS: AutoLinkTitleSettings = {
@@ -27,6 +28,7 @@ export const DEFAULT_SETTINGS: AutoLinkTitleSettings = {
   enhanceDefaultPaste: true,
   websiteBlacklist: "",
   maximumTitleLength: 0,
+  useNewScraper: false,
 };
 
 export class AutoLinkTitleSettingTab extends PluginSettingTab {
@@ -60,16 +62,16 @@ export class AutoLinkTitleSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName("Maximum title length")
       .setDesc(
-          "Set the maximum length of the title. Set to 0 to disable."
+        "Set the maximum length of the title. Set to 0 to disable."
       )
       .addText((val) =>
-          val
-              .setValue(this.plugin.settings.maximumTitleLength.toString(10))
-              .onChange(async (value) => {
-                  const titleLength = (Number(value))
-                  this.plugin.settings.maximumTitleLength = isNaN(titleLength) || titleLength < 0  ? 0 : titleLength;
-                  await this.plugin.saveSettings();
-              })
+        val
+          .setValue(this.plugin.settings.maximumTitleLength.toString(10))
+          .onChange(async (value) => {
+            const titleLength = (Number(value))
+            this.plugin.settings.maximumTitleLength = isNaN(titleLength) || titleLength < 0 ? 0 : titleLength;
+            await this.plugin.saveSettings();
+          })
       )
 
     new Setting(containerEl)
@@ -98,6 +100,21 @@ export class AutoLinkTitleSettingTab extends PluginSettingTab {
           .setPlaceholder("localhost, tiktok.com")
           .onChange(async (value) => {
             this.plugin.settings.websiteBlacklist = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Use New Scraper")
+      .setDesc(
+        "Use experimental new scraper, seems to work well on desktop but not mobile."
+      )
+      .addToggle((val) =>
+        val
+          .setValue(this.plugin.settings.useNewScraper)
+          .onChange(async (value) => {
+            console.log(value);
+            this.plugin.settings.useNewScraper = value;
             await this.plugin.saveSettings();
           })
       );
