@@ -9,6 +9,7 @@ export interface AutoLinkTitleSettings {
   imageRegex: RegExp;
   shouldReplaceSelection: boolean;
   enhanceDefaultPaste: boolean;
+  enhanceDropEvents: boolean;
   websiteBlacklist: string;
   maximumTitleLength: number;
   useNewScraper: boolean;
@@ -26,6 +27,7 @@ export const DEFAULT_SETTINGS: AutoLinkTitleSettings = {
   imageRegex: /\.(gif|jpe?g|tiff?|png|webp|bmp|tga|psd|ai)$/i,
   shouldReplaceSelection: true,
   enhanceDefaultPaste: true,
+  enhanceDropEvents: true,
   websiteBlacklist: "",
   maximumTitleLength: 0,
   useNewScraper: false,
@@ -55,6 +57,21 @@ export class AutoLinkTitleSettingTab extends PluginSettingTab {
           .onChange(async (value) => {
             console.log(value);
             this.plugin.settings.enhanceDefaultPaste = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Enhance Drop Events")
+      .setDesc(
+        "Fetch the link title when drag and dropping a link from another program"
+      )
+      .addToggle((val) =>
+        val
+          .setValue(this.plugin.settings.enhanceDropEvents)
+          .onChange(async (value) => {
+            console.log(value);
+            this.plugin.settings.enhanceDropEvents = value;
             await this.plugin.saveSettings();
           })
       );

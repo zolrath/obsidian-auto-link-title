@@ -14,9 +14,14 @@ interface PasteFunction {
   (this: HTMLElement, ev: ClipboardEvent): void;
 }
 
+interface DropFunction {
+  (this: HTMLElement, ev: DragEvent): void;
+}
+
 export default class AutoLinkTitle extends Plugin {
   settings: AutoLinkTitleSettings;
   pasteFunction: PasteFunction;
+  dropFunction: DropFunction;
   blacklist: Array<string>;
 
   async onload() {
@@ -27,6 +32,9 @@ export default class AutoLinkTitle extends Plugin {
 
     // Listen to paste event
     this.pasteFunction = this.pasteUrlWithTitle.bind(this);
+
+    // Listen to drop event
+    this.dropFunction = this.dropUrlWithTitle.bind(this);
 
     this.addCommand({
       id: "auto-link-title-paste",
@@ -49,6 +57,10 @@ export default class AutoLinkTitle extends Plugin {
 
     this.registerEvent(
       this.app.workspace.on("editor-paste", this.pasteFunction)
+    );
+
+    this.registerEvent(
+      this.app.workspace.on("editor-drop", this.dropFunction)
     );
 
     this.addCommand({
@@ -169,6 +181,47 @@ export default class AutoLinkTitle extends Plugin {
 
     // At this point we're just pasting a link in a normal fashion, fetch its title.
     this.convertUrlToTitledLink(editor, clipboardText);
+    return;
+  }
+
+  async dropUrlWithTitle(dropEvent: DragEvent, editor: Editor): Promise<void> {
+    if (!this.settings.enhanceDropEvents) {
+      return;
+    }
+
+    // Only attempt fetch if online
+    if (!navigator.onLine) return;
+
+    let dropText = dropEvent.dataTransfer.getData('text/plain');
+    if (dropText === null || dropText === "") return;
+
+    // If its not a URL, we return false to allow the default paste handler to take care of it.
+    // Similarly, image urls don't have a meaningful <title> attribute so downloading it
+    // to fetch the title is a waste of bandwidth.
+    if (!CheckIf.isUrl(dropText) || CheckIf.isImage(dropText)) {
+      return;
+    }
+
+    let selectedText = (EditorExtensions.getSelectedText(editor) || "").trim();
+    if (selectedText && !this.settings.shouldReplaceSelection) {
+      // If there is selected text and shouldReplaceSelection is false, do not fetch title
+      return;
+    }
+
+    // We've decided to handle the paste, stop propagation to the default handler.
+    dropEvent.stopPropagation();
+    dropEvent.preventDefault();
+
+    // If it looks like we're pasting the url into a markdown link already, don't fetch title
+    // as the user has already probably put a meaningful title, also it would lead to the title
+    // being inside the link.
+    if (CheckIf.isMarkdownLinkAlready(editor) || CheckIf.isAfterQuote(editor)) {
+      editor.replaceSelection(dropText);
+      return;
+    }
+
+    // At this point we're just pasting a link in a normal fashion, fetch its title.
+    this.convertUrlToTitledLink(editor, dropText);
     return;
   }
 
