@@ -1,6 +1,6 @@
 {
   "name": "obsidian-auto-link-title",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "description": "Automatically fetches the titles of links from the web and formats link when pasted",
   "main": "main.js",
   "scripts": {
