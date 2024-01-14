@@ -8,7 +8,6 @@ import {
   AutoLinkTitleSettings,
   DEFAULT_SETTINGS,
 } from "./settings"
-import { randomBytes } from 'crypto'
 
 interface PasteFunction {
   (this: HTMLElement, ev: ClipboardEvent): void;
@@ -302,8 +301,15 @@ export default class AutoLinkTitle extends Plugin {
     return urlRegex.exec(link)[2];
   }
 
+  // Custom hashid by @shabegom
   private createBlockHash(): string {
-    return randomBytes(6).toString('hex')
+    let result = "";
+    var characters = "abcdefghijklmnopqrstuvwxyz0123456789";
+    var charactersLength = characters.length;
+    for (var i = 0; i < 4; i++) {
+      result += characters.charAt(Math.floor(Math.random() * charactersLength));
+    }
+    return result;
   }
 
   onunload() {
