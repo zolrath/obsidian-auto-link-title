@@ -190,6 +190,8 @@ export default class AutoLinkTitle extends Plugin {
       return;
     }
 
+    if (dropEvent.defaultPrevented) return;
+
     // Only attempt fetch if online
     if (!navigator.onLine) return;
 
