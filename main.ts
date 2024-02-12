@@ -147,6 +147,8 @@ export default class AutoLinkTitle extends Plugin {
       return;
     }
 
+    if (clipboard.defaultPrevented) return;
+
     // Only attempt fetch if online
     if (!navigator.onLine) return;
 
@@ -187,6 +189,8 @@ export default class AutoLinkTitle extends Plugin {
     if (!this.settings.enhanceDropEvents) {
       return;
     }
+
+    if (dropEvent.defaultPrevented) return;
 
     // Only attempt fetch if online
     if (!navigator.onLine) return;
