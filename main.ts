@@ -180,6 +180,12 @@ export default class AutoLinkTitle extends Plugin {
       return;
     }
 
+    // If url is pasted over selected text and setting is enabled, no need to fetch title, 
+    // just insert a link
+    if (selectedText && this.settings.shouldPreserveSelectionAsTitle) {
+      editor.replaceSelection(`[${selectedText}](${clipboardText})`);
+    }
+
     // At this point we're just pasting a link in a normal fashion, fetch its title.
     this.convertUrlToTitledLink(editor, clipboardText);
     return;
