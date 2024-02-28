@@ -8,6 +8,7 @@ export interface AutoLinkTitleSettings {
   linkLineRegex: RegExp;
   imageRegex: RegExp;
   shouldReplaceSelection: boolean;
+  shouldPreserveSelectionAsTitle: boolean;
   enhanceDefaultPaste: boolean;
   enhanceDropEvents: boolean;
   websiteBlacklist: string;
@@ -102,6 +103,20 @@ export class AutoLinkTitleSettingTab extends PluginSettingTab {
           .onChange(async (value) => {
             console.log(value);
             this.plugin.settings.shouldReplaceSelection = value;
+            await this.plugin.saveSettings();
+          })
+      );
+    new Setting(containerEl)
+      .setName("Preserve selection as title")
+      .setDesc(
+        "Whether to prefer selected text as title over fetched title when pasting"
+      )
+      .addToggle((val) =>
+        val
+          .setValue(this.plugin.settings.shouldPreserveSelectionAsTitle)
+          .onChange(async (value) => {
+            console.log(value);
+            this.plugin.settings.shouldPreserveSelectionAsTitle = value;
             await this.plugin.saveSettings();
           })
       );
