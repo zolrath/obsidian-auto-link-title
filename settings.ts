@@ -28,6 +28,7 @@ export const DEFAULT_SETTINGS: AutoLinkTitleSettings = {
   imageRegex: /\.(gif|jpe?g|tiff?|png|webp|bmp|tga|psd|ai)$/i,
   shouldReplaceSelection: true,
   enhanceDefaultPaste: true,
+  shouldPreserveSelectionAsTitle: false,
   enhanceDropEvents: true,
   websiteBlacklist: "",
   maximumTitleLength: 0,
