@@ -287,16 +287,19 @@ export default class AutoLinkTitle extends Plugin {
 
   async fetchUrlTitle(url: string): Promise<string> {
     try {
-      let title = "";
-      if (this.settings.useNewScraper) {
-        title = await getPageTitle(url);
-      } else {
-        title = await getElectronPageTitle(url);
-      }
+      const apiEndpoint = `https://api.linkpreview.net/?q=${encodeURIComponent(url)}`;
+      const response = await fetch(apiEndpoint, {
+        headers: {
+          "X-Linkpreview-Api-Key": this.settings.linkPreviewApiKey,
+        }
+      });
+      const data = await response.json();
+      // Assuming the API returns a JSON object with a title property
+      const title = data.title || 'Title Unavailable';
       return title.replace(/(\r\n|\n|\r)/gm, "").trim();
     } catch (error) {
-      console.error(error)
-      return 'Error fetching title'
+      console.error(error);
+      return 'Error fetching title';
     }
   }
 

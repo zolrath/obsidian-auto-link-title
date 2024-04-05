@@ -13,6 +13,7 @@ export interface AutoLinkTitleSettings {
   websiteBlacklist: string;
   maximumTitleLength: number;
   useNewScraper: boolean;
+  linkPreviewApiKey: string;
 }
 
 export const DEFAULT_SETTINGS: AutoLinkTitleSettings = {
@@ -31,6 +32,7 @@ export const DEFAULT_SETTINGS: AutoLinkTitleSettings = {
   websiteBlacklist: "",
   maximumTitleLength: 0,
   useNewScraper: false,
+  linkPreviewApiKey: "",
 };
 
 export class AutoLinkTitleSettingTab extends PluginSettingTab {
@@ -135,5 +137,15 @@ export class AutoLinkTitleSettingTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           })
       );
+
+    new Setting(containerEl)
+      .setName("LinkPreview API Key")
+      .setDesc("API key for the LinkPreview.net service. Get one at https://my.linkpreview.net/access_keys")
+      .addText(text => text
+        .setValue(this.plugin.settings.linkPreviewApiKey || "")
+        .onChange(async (value) => {
+          this.plugin.settings.linkPreviewApiKey = value;
+          await this.plugin.saveSettings();
+        }));
   }
 }
