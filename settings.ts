@@ -7,7 +7,6 @@ export interface AutoLinkTitleSettings {
   linkRegex: RegExp;
   linkLineRegex: RegExp;
   imageRegex: RegExp;
-  shouldReplaceSelection: boolean;
   shouldPreserveSelectionAsTitle: boolean;
   enhanceDefaultPaste: boolean;
   enhanceDropEvents: boolean;
@@ -26,7 +25,6 @@ export const DEFAULT_SETTINGS: AutoLinkTitleSettings = {
   linkLineRegex:
     /\[([^\[\]]*)\]\((https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})\)/gi,
   imageRegex: /\.(gif|jpe?g|tiff?|png|webp|bmp|tga|psd|ai)$/i,
-  shouldReplaceSelection: true,
   enhanceDefaultPaste: true,
   shouldPreserveSelectionAsTitle: false,
   enhanceDropEvents: true,
@@ -93,20 +91,6 @@ export class AutoLinkTitleSettingTab extends PluginSettingTab {
           })
       )
 
-    new Setting(containerEl)
-      .setName("Replace Selection")
-      .setDesc(
-        "Whether to replace a text selection with link and fetched title"
-      )
-      .addToggle((val) =>
-        val
-          .setValue(this.plugin.settings.shouldReplaceSelection)
-          .onChange(async (value) => {
-            console.log(value);
-            this.plugin.settings.shouldReplaceSelection = value;
-            await this.plugin.saveSettings();
-          })
-      );
     new Setting(containerEl)
       .setName("Preserve selection as title")
       .setDesc(
