@@ -35,6 +35,11 @@ async function electronGetPageTitle(url: string): Promise<string> {
     });
     window.webContents.setAudioMuted(true);
 
+    window.webContents.on("will-navigate", (event: any, newUrl: any) => {
+      event.preventDefault();
+      window.loadURL(newUrl);
+    });
+
     await load(window, url);
 
     try {
@@ -52,7 +57,7 @@ async function electronGetPageTitle(url: string): Promise<string> {
     }
   } catch (ex) {
     console.error(ex);
-    return "Site Unreachable";
+    return "";
   }
 }
 
@@ -78,7 +83,7 @@ async function nonElectronGetPageTitle(url: string): Promise<string> {
   } catch (ex) {
     console.error(ex);
 
-    return "Site Unreachable";
+    return "";
   }
 }
 
