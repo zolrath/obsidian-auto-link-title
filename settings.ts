@@ -15,6 +15,7 @@ export interface AutoLinkTitleSettings {
   maximumTitleLength: number;
   useNewScraper: boolean;
   linkPreviewApiKey: string;
+  useBetterPasteId: boolean;
 }
 
 export const DEFAULT_SETTINGS: AutoLinkTitleSettings = {
@@ -34,6 +35,7 @@ export const DEFAULT_SETTINGS: AutoLinkTitleSettings = {
   maximumTitleLength: 0,
   useNewScraper: false,
   linkPreviewApiKey: "",
+  useBetterPasteId: false,
 };
 
 export class AutoLinkTitleSettingTab extends PluginSettingTab {
@@ -134,6 +136,21 @@ export class AutoLinkTitleSettingTab extends PluginSettingTab {
           .onChange(async (value) => {
             console.log(value);
             this.plugin.settings.useNewScraper = value;
+            await this.plugin.saveSettings();
+          })
+    );
+    
+    new Setting(containerEl)
+      .setName("Use Better Fetching Placeholder")
+      .setDesc(
+        "Use a more readable placeholder when fetching the title of a link."
+      )
+      .addToggle((val) =>
+        val
+          .setValue(this.plugin.settings.useBetterPasteId)
+          .onChange(async (value) => {
+            console.log(value);
+            this.plugin.settings.useBetterPasteId = value;
             await this.plugin.saveSettings();
           })
       );
