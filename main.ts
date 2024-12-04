@@ -247,7 +247,7 @@ export default class AutoLinkTitle extends Plugin {
     }
 
     // Generate a unique id for find/replace operations for the title.
-    const pasteId = `Fetching Title#${this.createBlockHash()}`;
+    const pasteId = this.getPasteId();
 
     // Instantly paste so you don't wonder if paste is broken
     editor.replaceSelection(`[${pasteId}](${url})`);
@@ -308,6 +308,31 @@ export default class AutoLinkTitle extends Plugin {
   public getUrlFromLink(link: string): string {
     let urlRegex = new RegExp(DEFAULT_SETTINGS.linkRegex);
     return urlRegex.exec(link)[2];
+  }
+
+  private getPasteId(): string {
+    var base = "Fetching Title";
+    if (this.settings.useBetterPasteId) {
+      return this.getBetterPasteId(base);
+    } else {
+      return `${base}#${this.createBlockHash()}`;
+    }
+  }
+
+  private getBetterPasteId(base: string): string {
+    // After every character, add 0, 1 or 2 invisible characters
+    // so that to the user it looks just like the base string.
+    // The number of combinations is 3^14 = 4782969
+    let result = "";
+    var invisibleCharacter = "\u200B";
+    var maxInvisibleCharacters = 2;
+    for (var i = 0; i < base.length; i++) {
+      var count = Math.floor(
+        Math.random() * (maxInvisibleCharacters + 1)
+      );
+      result += base.charAt(i) + invisibleCharacter.repeat(count);
+    }
+    return result;
   }
 
   // Custom hashid by @shabegom
