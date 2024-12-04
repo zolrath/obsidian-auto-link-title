@@ -1,13 +1,13 @@
-import { CheckIf } from "checkif"
-import { EditorExtensions } from "editor-enhancements"
-import { Editor, Plugin } from "obsidian"
-import getPageTitle from "scraper"
-import getElectronPageTitle from "electron-scraper"
+import { CheckIf } from "checkif";
+import { EditorExtensions } from "editor-enhancements";
+import { Editor, Plugin } from "obsidian";
+import getPageTitle from "scraper";
+import getElectronPageTitle from "electron-scraper";
 import {
   AutoLinkTitleSettingTab,
   AutoLinkTitleSettings,
   DEFAULT_SETTINGS,
-} from "./settings"
+} from "./settings";
 
 interface PasteFunction {
   (this: HTMLElement, ev: ClipboardEvent): void;
@@ -27,7 +27,10 @@ export default class AutoLinkTitle extends Plugin {
     console.log("loading obsidian-auto-link-title");
     await this.loadSettings();
 
-    this.blacklist = this.settings.websiteBlacklist.split(",").map(s => s.trim()).filter(s => s.length > 0);
+    this.blacklist = this.settings.websiteBlacklist
+      .split(",")
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
 
     // Listen to paste event
     this.pasteFunction = this.pasteUrlWithTitle.bind(this);
@@ -58,9 +61,7 @@ export default class AutoLinkTitle extends Plugin {
       this.app.workspace.on("editor-paste", this.pasteFunction)
     );
 
-    this.registerEvent(
-      this.app.workspace.on("editor-drop", this.dropFunction)
-    );
+    this.registerEvent(this.app.workspace.on("editor-drop", this.dropFunction));
 
     this.addCommand({
       id: "enhance-url-with-title",
@@ -89,8 +90,8 @@ export default class AutoLinkTitle extends Plugin {
     }
     // If the cursor is on the URL part of a markdown link, fetch title and replace existing link title
     else if (CheckIf.isLinkedUrl(selectedText)) {
-      const link = this.getUrlFromLink(selectedText)
-      this.convertUrlToTitledLink(editor, link)
+      const link = this.getUrlFromLink(selectedText);
+      this.convertUrlToTitledLink(editor, link);
     }
   }
 
@@ -103,7 +104,7 @@ export default class AutoLinkTitle extends Plugin {
 
   // Simulate standard paste but using editor.replaceSelection with clipboard text since we can't seem to dispatch a paste event.
   async manualPasteUrlWithTitle(editor: Editor): Promise<void> {
-    const clipboardText = await navigator.clipboard.readText()
+    const clipboardText = await navigator.clipboard.readText();
 
     // Only attempt fetch if online
     if (!navigator.onLine) {
@@ -111,7 +112,7 @@ export default class AutoLinkTitle extends Plugin {
       return;
     }
 
-    if (clipboardText == null || clipboardText == '') return
+    if (clipboardText == null || clipboardText == "") return;
 
     // If its not a URL, we return false to allow the default paste handler to take care of it.
     // Similarly, image urls don't have a meaningful <title> attribute so downloading it
@@ -129,7 +130,7 @@ export default class AutoLinkTitle extends Plugin {
       return;
     }
 
-    // If url is pasted over selected text and setting is enabled, no need to fetch title, 
+    // If url is pasted over selected text and setting is enabled, no need to fetch title,
     // just insert a link
     let selectedText = (EditorExtensions.getSelectedText(editor) || "").trim();
     if (selectedText && this.settings.shouldPreserveSelectionAsTitle) {
@@ -142,7 +143,10 @@ export default class AutoLinkTitle extends Plugin {
     return;
   }
 
-  async pasteUrlWithTitle(clipboard: ClipboardEvent, editor: Editor): Promise<void> {
+  async pasteUrlWithTitle(
+    clipboard: ClipboardEvent,
+    editor: Editor
+  ): Promise<void> {
     if (!this.settings.enhanceDefaultPaste) {
       return;
     }
@@ -162,7 +166,6 @@ export default class AutoLinkTitle extends Plugin {
       return;
     }
 
-
     // We've decided to handle the paste, stop propagation to the default handler.
     clipboard.stopPropagation();
     clipboard.preventDefault();
@@ -175,7 +178,7 @@ export default class AutoLinkTitle extends Plugin {
       return;
     }
 
-    // If url is pasted over selected text and setting is enabled, no need to fetch title, 
+    // If url is pasted over selected text and setting is enabled, no need to fetch title,
     // just insert a link
     let selectedText = (EditorExtensions.getSelectedText(editor) || "").trim();
     if (selectedText && this.settings.shouldPreserveSelectionAsTitle) {
@@ -198,7 +201,7 @@ export default class AutoLinkTitle extends Plugin {
     // Only attempt fetch if online
     if (!navigator.onLine) return;
 
-    let dropText = dropEvent.dataTransfer.getData('text/plain');
+    let dropText = dropEvent.dataTransfer.getData("text/plain");
     if (dropText === null || dropText === "") return;
 
     // If its not a URL, we return false to allow the default paste handler to take care of it.
@@ -220,7 +223,7 @@ export default class AutoLinkTitle extends Plugin {
       return;
     }
 
-    // If url is pasted over selected text and setting is enabled, no need to fetch title, 
+    // If url is pasted over selected text and setting is enabled, no need to fetch title,
     // just insert a link
     let selectedText = (EditorExtensions.getSelectedText(editor) || "").trim();
     if (selectedText && this.settings.shouldPreserveSelectionAsTitle) {
@@ -235,8 +238,11 @@ export default class AutoLinkTitle extends Plugin {
 
   async isBlacklisted(url: string): Promise<boolean> {
     await this.loadSettings();
-    this.blacklist = this.settings.websiteBlacklist.split(/,|\n/).map(s => s.trim()).filter(s => s.length > 0)
-    return this.blacklist.some(site => url.includes(site))
+    this.blacklist = this.settings.websiteBlacklist
+      .split(/,|\n/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+    return this.blacklist.some((site) => url.includes(site));
   }
 
   async convertUrlToTitledLink(editor: Editor, url: string): Promise<void> {
@@ -274,9 +280,9 @@ export default class AutoLinkTitle extends Plugin {
   }
 
   escapeMarkdown(text: string): string {
-    var unescaped = text.replace(/\\(\*|_|`|~|\\|\[|\])/g, '$1') // unescape any "backslashed" character
-    var escaped = unescaped.replace(/(\*|_|`|<|>|~|\\|\[|\])/g, '\\$1') // escape *, _, `, ~, \, [, ], <, and >
-    return escaped
+    var unescaped = text.replace(/\\(\*|_|`|~|\\|\[|\])/g, "$1"); // unescape any "backslashed" character
+    var escaped = unescaped.replace(/(\*|_|`|<|>|~|\\|\[|\])/g, "\\$1"); // escape *, _, `, ~, \, [, ], <, and >
+    return escaped;
   }
 
   public shortTitle = (title: string): string => {
@@ -286,22 +292,63 @@ export default class AutoLinkTitle extends Plugin {
     if (title.length < this.settings.maximumTitleLength + 3) {
       return title;
     }
-    const shortenedTitle = `${title.slice(0, this.settings.maximumTitleLength)}...`;
+    const shortenedTitle = `${title.slice(
+      0,
+      this.settings.maximumTitleLength
+    )}...`;
     return shortenedTitle;
+  };
+
+  public async fetchUrlTitleViaLinkPreview(url: string): Promise<string> {
+    if (this.settings.linkPreviewApiKey.length !== 32) {
+      console.error(
+        "LinkPreview API key is not 32 characters long, please check your settings"
+      );
+      return "";
+    }
+
+    try {
+      const apiEndpoint = `https://api.linkpreview.net/?q=${encodeURIComponent(
+        url
+      )}`;
+      const response = await fetch(apiEndpoint, {
+        headers: {
+          "X-Linkpreview-Api-Key": this.settings.linkPreviewApiKey,
+        },
+      });
+      const data = await response.json();
+      return data.title;
+    } catch (error) {
+      console.error(error);
+      return "";
+    }
   }
 
   async fetchUrlTitle(url: string): Promise<string> {
     try {
       let title = "";
-      if (this.settings.useNewScraper) {
-        title = await getPageTitle(url);
-      } else {
-        title = await getElectronPageTitle(url);
+      title = await this.fetchUrlTitleViaLinkPreview(url);
+      console.log(`Title via Link Preview: ${title}`);
+
+      if (title === "") {
+        console.log("Title via Link Preview failed, falling back to scraper");
+        if (this.settings.useNewScraper) {
+          console.log("Using new scraper");
+          title = await getPageTitle(url);
+        } else {
+          console.log("Using old scraper");
+          title = await getElectronPageTitle(url);
+        }
       }
-      return title.replace(/(\r\n|\n|\r)/gm, "").trim();
+
+      console.log(`Title: ${title}`);
+      title =
+        title.replace(/(\r\n|\n|\r)/gm, "").trim() ||
+        "Title Unavailable | Site Unreachable";
+      return title;
     } catch (error) {
-      console.error(error)
-      return 'Error fetching title'
+      console.error(error);
+      return "Error fetching title";
     }
   }
 

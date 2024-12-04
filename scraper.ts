@@ -31,7 +31,7 @@ async function scrape(url: string): Promise<string> {
     return title.innerText
   } catch (ex) {
     console.error(ex)
-    return 'Site Unreachable'
+    return ''
   }
 }
 
