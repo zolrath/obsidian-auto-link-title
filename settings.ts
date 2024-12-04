@@ -1,5 +1,6 @@
 import AutoLinkTitle from "main";
 import { App, PluginSettingTab, Setting } from "obsidian";
+import { Notice } from "obsidian";
 
 export interface AutoLinkTitleSettings {
   regex: RegExp;
@@ -80,18 +81,17 @@ export class AutoLinkTitleSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Maximum title length")
-      .setDesc(
-        "Set the maximum length of the title. Set to 0 to disable."
-      )
+      .setDesc("Set the maximum length of the title. Set to 0 to disable.")
       .addText((val) =>
         val
           .setValue(this.plugin.settings.maximumTitleLength.toString(10))
           .onChange(async (value) => {
-            const titleLength = (Number(value))
-            this.plugin.settings.maximumTitleLength = isNaN(titleLength) || titleLength < 0 ? 0 : titleLength;
+            const titleLength = Number(value);
+            this.plugin.settings.maximumTitleLength =
+              isNaN(titleLength) || titleLength < 0 ? 0 : titleLength;
             await this.plugin.saveSettings();
           })
-      )
+      );
 
     new Setting(containerEl)
       .setName("Preserve selection as title")
@@ -140,12 +140,22 @@ export class AutoLinkTitleSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("LinkPreview API Key")
-      .setDesc("API key for the LinkPreview.net service. Get one at https://my.linkpreview.net/access_keys")
-      .addText(text => text
-        .setValue(this.plugin.settings.linkPreviewApiKey || "")
-        .onChange(async (value) => {
-          this.plugin.settings.linkPreviewApiKey = value;
-          await this.plugin.saveSettings();
-        }));
+      .setDesc(
+        "API key for the LinkPreview.net service. Get one at https://my.linkpreview.net/access_keys"
+      )
+      .addText((text) =>
+        text
+          .setValue(this.plugin.settings.linkPreviewApiKey || "")
+          .onChange(async (value) => {
+            const trimmedValue = value.trim();
+            if (trimmedValue.length > 0 && trimmedValue.length !== 32) {
+              new Notice("LinkPreview API key must be 32 characters long");
+              this.plugin.settings.linkPreviewApiKey = "";
+            } else {
+              this.plugin.settings.linkPreviewApiKey = trimmedValue;
+            }
+            await this.plugin.saveSettings();
+          })
+      );
   }
 }

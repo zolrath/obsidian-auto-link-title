@@ -300,6 +300,13 @@ export default class AutoLinkTitle extends Plugin {
   };
 
   public async fetchUrlTitleViaLinkPreview(url: string): Promise<string> {
+    if (this.settings.linkPreviewApiKey.length !== 32) {
+      console.error(
+        "LinkPreview API key is not 32 characters long, please check your settings"
+      );
+      return "";
+    }
+
     try {
       const apiEndpoint = `https://api.linkpreview.net/?q=${encodeURIComponent(
         url
