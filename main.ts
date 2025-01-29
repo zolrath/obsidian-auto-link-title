@@ -158,6 +158,7 @@ export default class AutoLinkTitle extends Plugin {
     }
 
     if (clipboard.defaultPrevented) return;
+    if ((clipboard.target as HTMLElement).classList.contains('cm-hmd-codeblock')) return;
 
     let clipboardText = clipboard.clipboardData.getData("text/plain");
     if (clipboardText === null || clipboardText === "") return;
