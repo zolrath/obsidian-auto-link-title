@@ -312,10 +312,16 @@ export default class AutoLinkTitle extends Plugin {
   };
 
   public async fetchUrlTitleViaLinkPreview(url: string): Promise<string> {
-    if (this.settings.linkPreviewApiKey.length !== 32) {
-      console.error(
-        "LinkPreview API key is not 32 characters long, please check your settings"
-      );
+    let keyLength = this.settings.linkPreviewApiKey.length;
+    if (keyLength !== 32) {
+      // The Settings UI enforces the correct key length.
+      // So we only need to inform users if the key in settings somehow got corrupted to a different length.
+      // (If users haven't set up the key, they don't need to be told the length is "wrong".)
+      if (keyLength !== 0) {
+        console.error(
+            "LinkPreview API key is not 32 characters long, please check your settings"
+        );
+      }
       return "";
     }
 
