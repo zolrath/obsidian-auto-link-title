@@ -43,6 +43,8 @@ async function electronGetPageTitle(url: string): Promise<string> {
     await load(window, url);
 
     try {
+      window.webContents.on("did-finish-load", () => {});
+      window.webContents.on("did-fail-load", () => {});
       const title = window.webContents.getTitle();
       window.destroy();
 
@@ -103,7 +105,7 @@ async function tryGetFileType(url: string) {
 
     // Ensure site returns an ok status code before scraping
     if (!response.ok) {
-      return "Site Unreachable";
+      return null;
     }
 
     // Ensure site is an actual HTML page and not a pdf or 3 gigabyte video file.
