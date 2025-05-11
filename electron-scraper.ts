@@ -43,6 +43,7 @@ async function electronGetPageTitle(url: string): Promise<string> {
     await load(window, url);
 
     try {
+      await new Promise(res => setTimeout(res, 500));
       const title = window.webContents.getTitle();
       window.destroy();
 
