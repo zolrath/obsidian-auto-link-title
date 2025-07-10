@@ -292,11 +292,18 @@ export default class AutoLinkTitle extends Plugin {
         // Instantly paste so you don't wonder if paste is broken
         editor.replaceSelection(`[${pasteId}](${url})`);
 
-        // Fetch title and favicon concurrently
-        const [title, faviconUrl] = await Promise.all([
-            this.fetchUrlTitle(url),
-            fetchFaviconUrl(url)
-        ]);
+        // Fetch title and favicon concurrently (if enabled)
+        let title: string,
+            faviconUrl: string = "";
+        if (this.settings.enableFavicon) {
+            [title, faviconUrl] = await Promise.all([
+                this.fetchUrlTitle(url),
+                fetchFaviconUrl(url),
+            ]);
+        } else {
+            title = await this.fetchUrlTitle(url);
+            faviconUrl = "";
+        }
         const escapedTitle = this.escapeMarkdown(title);
         const shortenedTitle = this.shortTitle(escapedTitle);
 
@@ -320,7 +327,7 @@ export default class AutoLinkTitle extends Plugin {
             // Insert favicon as HTML img before the markdown link (works in preview mode)
             // Markdown: <img src="faviconUrl" style="width:1em;height:1em;vertical-align:text-bottom;"> [title](url)
             let replacement = shortenedTitle;
-            if (faviconUrl) {
+            if (this.settings.enableFavicon && faviconUrl) {
                 replacement =
                     `<img src=\"${faviconUrl}\" style=\"width:1em;height:1em;vertical-align:text-bottom;display:inline-block;margin-right:0.2em;\"> ` +
                     shortenedTitle;
