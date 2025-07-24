@@ -18,6 +18,7 @@ async function load(window: any, url: string): Promise<void> {
   });
 }
 
+// method 3: get title via electron browser
 async function electronGetPageTitle(url: string): Promise<string> {
   const { remote } = electronPkg;
   const { BrowserWindow } = remote;
