@@ -1,4 +1,5 @@
 import { requestUrl } from 'obsidian'
+import AutoLinkTitle from "./main";
 
 function blank(text: string): boolean {
   return text === undefined || text === null || text === ''
@@ -8,9 +9,19 @@ function notBlank(text: string): boolean {
   return !blank(text)
 }
 
-async function scrape(url: string): Promise<string> {
+// method 2: get title via js request
+async function scrape(url: string, plugin?: AutoLinkTitle): Promise<string> {
   try {
-    const response = await requestUrl(url)
+    // get header by domain or default
+    let options: any = {};
+    if (plugin) {
+      const headers = await plugin.getHeadersForUrl(url);
+      if (Object.keys(headers).length > 0) {
+        options.headers = headers;
+      }
+    }
+
+    const response = await requestUrl({ url, ...options });
     if (!response.headers['content-type'].includes('text/html')) return getUrlFinalSegment(url)
     const html = response.text
 
@@ -45,10 +56,11 @@ function getUrlFinalSegment(url: string): string {
   }
 }
 
-export default async function getPageTitle(url: string) {
+// method 2: get title via js request
+export default async function getPageTitle(url: string, plugin?: AutoLinkTitle) {
   if (!(url.startsWith('http') || url.startsWith('https'))) {
     url = 'https://' + url
   }
 
-  return scrape(url)
+  return scrape(url, plugin)
 }

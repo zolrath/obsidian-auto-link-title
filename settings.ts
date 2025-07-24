@@ -16,6 +16,8 @@ export interface AutoLinkTitleSettings {
   useNewScraper: boolean;
   linkPreviewApiKey: string;
   useBetterPasteId: boolean;
+  defaultHeadersJson: string;
+  domainHeadersJson: string;
 }
 
 export const DEFAULT_SETTINGS: AutoLinkTitleSettings = {
@@ -36,6 +38,8 @@ export const DEFAULT_SETTINGS: AutoLinkTitleSettings = {
   useNewScraper: false,
   linkPreviewApiKey: "",
   useBetterPasteId: false,
+  defaultHeadersJson: "{}",
+  domainHeadersJson: "{}",
 };
 
 export class AutoLinkTitleSettingTab extends PluginSettingTab {
@@ -138,8 +142,8 @@ export class AutoLinkTitleSettingTab extends PluginSettingTab {
             this.plugin.settings.useNewScraper = value;
             await this.plugin.saveSettings();
           })
-    );
-    
+      );
+
     new Setting(containerEl)
       .setName("Use Better Fetching Placeholder")
       .setDesc(
@@ -172,6 +176,42 @@ export class AutoLinkTitleSettingTab extends PluginSettingTab {
               this.plugin.settings.linkPreviewApiKey = trimmedValue;
             }
             await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Domain Header Json for New Scraper")
+      .setDesc("Request headers for domains in JSON format, for example: {\"example.com\": {\"User-Agent\":\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36\",\"Cookie\": \"abc\", \"Referer\": \"example.com\"}}")
+      .addTextArea((val) =>
+        val
+          .setValue(this.plugin.settings.domainHeadersJson)
+          .setPlaceholder("{\"example.com\": {\"User-Agent\":\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36\",\"Cookie\": \"abc\", \"Referer\": \"example.com\"}}")
+          .onChange(async (value) => {
+            this.plugin.settings.domainHeadersJson = value;
+            await this.plugin.saveSettings();
+          })
+          .then((textArea) => {
+            textArea.inputEl.style.minWidth = "500px";
+            textArea.inputEl.style.minHeight = "400px";
+            textArea.inputEl.style.resize = "vertical";
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Default Header Json for New Scraper")
+      .setDesc("Default request headers in JSON format used when NOT setting the header for a domain , for example: {\"Accept\": \"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\",\"User-Agent\":\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36\"}. In most cases, setting {} is sufficient.")
+      .addTextArea((val) =>
+        val
+          .setValue(this.plugin.settings.defaultHeadersJson)
+          .setPlaceholder("{\"Accept\": \"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\",\"User-Agent\":\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36\"}")
+          .onChange(async (value) => {
+            this.plugin.settings.defaultHeadersJson = value;
+            await this.plugin.saveSettings();
+          })
+          .then((textArea) => {
+            textArea.inputEl.style.minWidth = "500px";
+            textArea.inputEl.style.minHeight = "400px";
+            textArea.inputEl.style.resize = "vertical";
           })
       );
   }

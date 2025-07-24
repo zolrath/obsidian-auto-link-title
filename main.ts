@@ -17,6 +17,12 @@ interface DropFunction {
   (this: HTMLElement, ev: DragEvent): void;
 }
 
+// cache headersMap 和 defaultHeaders
+let cachedHeadersMap: Record<string, Record<string, string>> | null = null;
+let lastDomainHeadersJson: string | null = null;
+let cachedDefaultHeaders: Record<string, string> | null = null;
+let lastDefaultHeadersJson: string | null = null;
+
 export default class AutoLinkTitle extends Plugin {
   settings: AutoLinkTitleSettings;
   pasteFunction: PasteFunction;
@@ -38,6 +44,7 @@ export default class AutoLinkTitle extends Plugin {
     // Listen to drop event
     this.dropFunction = this.dropUrlWithTitle.bind(this);
 
+    // add command to obsidian
     this.addCommand({
       id: "auto-link-title-paste",
       name: "Paste URL and auto fetch title",
@@ -247,6 +254,57 @@ export default class AutoLinkTitle extends Plugin {
     return;
   }
 
+  // clean jsonString (remove trailing comma)
+  cleanJsonString(jsonString: string): string {
+    try {
+      return jsonString.replace(/,\s*}/g, "}").replace(/,\s*]/g, "]");
+    } catch (error) {
+      console.error("Failed to clean JSON string:", error);
+      return "{}";
+    }
+  }
+
+  // load header by domain from setting
+  async getHeadersForUrl(url: string): Promise<Record<string, string>> {
+    await this.loadSettings();
+    console.log(`Plugin Info: ${this}`)
+    const defaultHeaderjson = this.settings.defaultHeadersJson
+    try {
+      // get and clean domainHeadersJson
+      const domainHeadersJson = this.settings.domainHeadersJson || "{}";
+      if (cachedHeadersMap === null || lastDomainHeadersJson !== domainHeadersJson) {
+        const cleanedJson = this.cleanJsonString(domainHeadersJson);
+        cachedHeadersMap = JSON.parse(cleanedJson);
+        lastDomainHeadersJson = domainHeadersJson;
+      }
+
+      // get and clean defaultHeadersJson
+      const defaultHeadersJson = this.settings.defaultHeadersJson || "{}";
+      if (cachedDefaultHeaders === null || lastDefaultHeadersJson !== defaultHeadersJson) {
+        const cleanedDefaultJson = this.cleanJsonString(defaultHeadersJson);
+        cachedDefaultHeaders = JSON.parse(cleanedDefaultJson) as Record<string, string>;
+        lastDefaultHeadersJson = defaultHeadersJson;
+      }
+
+      // get url domain
+      const domain = new URL(url).hostname;
+
+      // check headersMap[domain]
+      const headers = cachedHeadersMap[domain];
+      console.log(`Headers: ${headers}`)
+      if (headers && typeof headers === "object") {
+        return headers as Record<string, string>;
+      }
+      // No headers for current url domain, use default headers
+      console.debug(`No headers for domain ${domain}, using default headers`);
+      return { ...cachedDefaultHeaders };
+    } catch (error) {
+      console.error(`Failed to parse headers for URL ${url}:`, error);
+      // Fail to parse headers, use default headers
+      return { ...cachedDefaultHeaders || {} };
+    }
+  }
+
   async isBlacklisted(url: string): Promise<boolean> {
     await this.loadSettings();
     this.blacklist = this.settings.websiteBlacklist
@@ -311,6 +369,7 @@ export default class AutoLinkTitle extends Plugin {
     return shortenedTitle;
   };
 
+  // method 1: get title via linkpreview
   public async fetchUrlTitleViaLinkPreview(url: string): Promise<string> {
     if (this.settings.linkPreviewApiKey.length !== 32) {
       console.error(
@@ -336,6 +395,7 @@ export default class AutoLinkTitle extends Plugin {
     }
   }
 
+  // method 2,3: get title via js request or via electron browser
   async fetchUrlTitle(url: string): Promise<string> {
     try {
       let title = "";
@@ -346,9 +406,11 @@ export default class AutoLinkTitle extends Plugin {
         console.log("Title via Link Preview failed, falling back to scraper");
         if (this.settings.useNewScraper) {
           console.log("Using new scraper");
-          title = await getPageTitle(url);
+          // method 2: get title via js request
+          title = await getPageTitle(url, this);
         } else {
           console.log("Using old scraper");
+          // method 3: get title via electron browser
           title = await getElectronPageTitle(url);
         }
       }
