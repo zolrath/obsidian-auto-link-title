@@ -7,6 +7,7 @@ import {
   AutoLinkTitleSettingTab,
   AutoLinkTitleSettings,
   DEFAULT_SETTINGS,
+  BlacklistTitlePlaceholder,
 } from "./settings";
 
 interface PasteFunction {
@@ -258,8 +259,12 @@ export default class AutoLinkTitle extends Plugin {
 
   async convertUrlToTitledLink(editor: Editor, url: string): Promise<void> {
     if (await this.isBlacklisted(url)) {
-      let domain = new URL(url).hostname;
-      editor.replaceSelection(`[${domain}](${url})`);
+      const placeholder =
+        this.settings.blacklistTitlePlaceholder ===
+        BlacklistTitlePlaceholder.DOMAIN
+          ? new URL(url).hostname
+          : url;
+      editor.replaceSelection(`[${placeholder}](${url})`);
       return;
     }
 

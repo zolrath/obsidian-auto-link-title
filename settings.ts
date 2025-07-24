@@ -12,10 +12,16 @@ export interface AutoLinkTitleSettings {
   enhanceDefaultPaste: boolean;
   enhanceDropEvents: boolean;
   websiteBlacklist: string;
+  blacklistTitlePlaceholder: BlacklistTitlePlaceholder;
   maximumTitleLength: number;
   useNewScraper: boolean;
   linkPreviewApiKey: string;
   useBetterPasteId: boolean;
+}
+
+export enum BlacklistTitlePlaceholder {
+  DOMAIN = "DOMAIN",
+  URL = "URL",
 }
 
 export const DEFAULT_SETTINGS: AutoLinkTitleSettings = {
@@ -32,6 +38,7 @@ export const DEFAULT_SETTINGS: AutoLinkTitleSettings = {
   shouldPreserveSelectionAsTitle: false,
   enhanceDropEvents: true,
   websiteBlacklist: "",
+  blacklistTitlePlaceholder: BlacklistTitlePlaceholder.DOMAIN,
   maximumTitleLength: 0,
   useNewScraper: false,
   linkPreviewApiKey: "",
@@ -126,6 +133,22 @@ export class AutoLinkTitleSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
+      .setName("Blacklist Title Placeholder")
+      .setDesc(
+        "Choose how to display the title for a URL that has been blacklisted"
+      )
+      .addDropdown((dropdown) => {
+        dropdown.addOption("DOMAIN", "Domain");
+        dropdown.addOption("URL", "URL");
+        dropdown.setValue(this.plugin.settings.blacklistTitlePlaceholder);
+        dropdown.onChange(async (value) => {
+          this.plugin.settings.blacklistTitlePlaceholder =
+            value as BlacklistTitlePlaceholder;
+          await this.plugin.saveSettings();
+        });
+      });
+
+    new Setting(containerEl)
       .setName("Use New Scraper")
       .setDesc(
         "Use experimental new scraper, seems to work well on desktop but not mobile."
@@ -138,8 +161,8 @@ export class AutoLinkTitleSettingTab extends PluginSettingTab {
             this.plugin.settings.useNewScraper = value;
             await this.plugin.saveSettings();
           })
-    );
-    
+      );
+
     new Setting(containerEl)
       .setName("Use Better Fetching Placeholder")
       .setDesc(
