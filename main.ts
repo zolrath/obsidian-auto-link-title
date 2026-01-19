@@ -41,6 +41,7 @@ export default class AutoLinkTitle extends Plugin {
     this.addCommand({
       id: "auto-link-title-paste",
       name: "Paste URL and auto fetch title",
+      icon: "clipboard-type",
       editorCallback: (editor) => this.manualPasteUrlWithTitle(editor),
       hotkeys: [],
     });
@@ -48,6 +49,7 @@ export default class AutoLinkTitle extends Plugin {
     this.addCommand({
       id: "auto-link-title-normal-paste",
       name: "Normal paste (no fetching behavior)",
+      icon: "clipboard",
       editorCallback: (editor) => this.normalPaste(editor),
       hotkeys: [
         {
@@ -66,6 +68,7 @@ export default class AutoLinkTitle extends Plugin {
     this.addCommand({
       id: "enhance-url-with-title",
       name: "Enhance existing URL with link and title",
+      icon: "book-type",
       editorCallback: (editor) => this.addTitleToLink(editor),
       hotkeys: [
         {
@@ -417,3 +420,4 @@ export default class AutoLinkTitle extends Plugin {
     await this.saveData(this.settings);
   }
 }
+
