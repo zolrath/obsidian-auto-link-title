@@ -313,9 +313,7 @@ export default class AutoLinkTitle extends Plugin {
 
   public async fetchUrlTitleViaLinkPreview(url: string): Promise<string> {
     if (this.settings.linkPreviewApiKey.length !== 32) {
-      console.error(
-        "LinkPreview API key is not 32 characters long, please check your settings"
-      );
+      // No API key configured — skip silently
       return "";
     }
 
@@ -340,26 +338,30 @@ export default class AutoLinkTitle extends Plugin {
     try {
       let title = "";
       title = await this.fetchUrlTitleViaLinkPreview(url);
-      console.log(`Title via Link Preview: ${title}`);
+      if (title !== "") {
+        console.log(`auto-link-title: got title via LinkPreview for ${url}: "${title}"`);
+      }
 
       if (title === "") {
-        console.log("Title via Link Preview failed, falling back to scraper");
         if (this.settings.useNewScraper) {
-          console.log("Using new scraper");
+          console.log(`auto-link-title: scraping (new) ${url}`);
           title = await getPageTitle(url);
         } else {
-          console.log("Using old scraper");
+          console.log(`auto-link-title: scraping (electron) ${url}`);
           title = await getElectronPageTitle(url);
         }
       }
 
-      console.log(`Title: ${title}`);
-      title =
-        title.replace(/(\r\n|\n|\r)/gm, "").trim() ||
-        "Title Unavailable | Site Unreachable";
+      title = title.replace(/(\r\n|\n|\r)/gm, "").trim();
+      if (!title) {
+        console.warn(`auto-link-title: all methods failed for ${url}`);
+        return "Title Unavailable | Site Unreachable";
+      }
+
+      console.log(`auto-link-title: resolved "${title}" for ${url}`);
       return title;
     } catch (error) {
-      console.error(error);
+      console.error(`auto-link-title: unexpected error for ${url}:`, error);
       return "Error fetching title";
     }
   }

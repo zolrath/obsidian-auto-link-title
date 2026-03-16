@@ -1,5 +1,10 @@
 const electronPkg = require("electron");
-import { request } from "obsidian";
+import { request, requestUrl } from "obsidian";
+
+const HEADERS: Record<string, string> = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+};
 
 function blank(text: string): boolean {
   return text === undefined || text === null || text === "";
@@ -61,30 +66,56 @@ async function electronGetPageTitle(url: string): Promise<string> {
   }
 }
 
-async function nonElectronGetPageTitle(url: string): Promise<string> {
-  try {
-    const html = await request({ url });
+function extractTitleFromHtml(html: string): string {
+  const doc = new DOMParser().parseFromString(html, "text/html");
 
-    const doc = new DOMParser().parseFromString(html, "text/html");
-    const title = doc.querySelectorAll("title")[0];
-
-    if (title == null || blank(title?.innerText)) {
-      // If site is javascript based and has a no-title attribute when unloaded, use it.
-      var noTitle = title?.getAttr("no-title");
-      if (notBlank(noTitle)) {
-        return noTitle;
-      }
-
-      // Otherwise if the site has no title/requires javascript simply return Title Unknown
-      return url;
-    }
-
-    return title.innerText;
-  } catch (ex) {
-    console.error(ex);
-
-    return "";
+  // Try <title> first
+  const titleEl = doc.querySelector("title");
+  if (notBlank(titleEl?.innerText)) {
+    return titleEl.innerText;
   }
+
+  // Fallback: og:title meta tag
+  const ogTitle = doc.querySelector('meta[property="og:title"]')?.getAttribute("content");
+  if (notBlank(ogTitle)) {
+    return ogTitle;
+  }
+
+  // Fallback: twitter:title
+  const twitterTitle = doc.querySelector('meta[name="twitter:title"]')?.getAttribute("content");
+  if (notBlank(twitterTitle)) {
+    return twitterTitle;
+  }
+
+  // If site is javascript based and has a no-title attribute when unloaded, use it.
+  const noTitle = titleEl?.getAttr("no-title");
+  if (notBlank(noTitle)) {
+    return noTitle;
+  }
+
+  return "";
+}
+
+async function nonElectronGetPageTitle(url: string): Promise<string> {
+  // Try request() first
+  try {
+    const html = await request({ url, headers: HEADERS });
+    const title = extractTitleFromHtml(html);
+    if (notBlank(title)) return title;
+  } catch (ex) {
+    console.log(`obsidian-auto-link-title: request failed for ${url}:`, ex);
+  }
+
+  // Fallback to requestUrl()
+  try {
+    const response = await requestUrl({ url, headers: HEADERS });
+    const title = extractTitleFromHtml(response.text);
+    if (notBlank(title)) return title;
+  } catch (ex) {
+    console.log(`obsidian-auto-link-title: requestUrl also failed for ${url}:`, ex);
+  }
+
+  return "";
 }
 
 function getUrlFinalSegment(url: string): string {
@@ -99,20 +130,20 @@ function getUrlFinalSegment(url: string): string {
 
 async function tryGetFileType(url: string) {
   try {
-    const response = await fetch(url, { method: "HEAD" });
-
-    // Ensure site returns an ok status code before scraping
-    if (!response.ok) {
-      return "Site Unreachable";
-    }
+    const response = await requestUrl({
+      url,
+      method: "HEAD",
+      headers: HEADERS,
+    });
 
     // Ensure site is an actual HTML page and not a pdf or 3 gigabyte video file.
-    let contentType = response.headers.get("content-type");
+    let contentType = response.headers['content-type'] || '';
     if (!contentType.includes("text/html")) {
       return getUrlFinalSegment(url);
     }
     return null;
   } catch (err) {
+    // If HEAD request fails (CORS, 403, etc.), don't block — try scraping anyway
     return null;
   }
 }
@@ -131,8 +162,11 @@ export default async function getPageTitle(url: string): Promise<string> {
   }
 
   if (electronPkg != null) {
-    return electronGetPageTitle(url);
-  } else {
-    return nonElectronGetPageTitle(url);
+    const title = await electronGetPageTitle(url);
+    if (title && title !== url) return title;
+    // Electron BrowserWindow failed — fall back to request()-based scraper
+    console.log(`auto-link-title: electron scraper failed for ${url}, falling back to request()`);
   }
+
+  return nonElectronGetPageTitle(url);
 }
