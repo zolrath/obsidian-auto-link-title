@@ -136,6 +136,11 @@ export default class AutoLinkTitle extends Plugin {
       return;
     }
 
+    if (!this.settings.enhanceInsideCodeBlocks && CheckIf.isInsideCodeBlock(editor)) {
+      editor.replaceSelection(clipboardText);
+      return;
+    }
+
     // If url is pasted over selected text and setting is enabled, no need to fetch title,
     // just insert a link
     let selectedText = (EditorExtensions.getSelectedText(editor) || "").trim();
@@ -166,6 +171,12 @@ export default class AutoLinkTitle extends Plugin {
     // Similarly, image urls don't have a meaningful <title> attribute so downloading it
     // to fetch the title is a waste of bandwidth.
     if (!CheckIf.isUrl(clipboardText) || CheckIf.isImage(clipboardText)) {
+      return;
+    }
+
+    // If the cursor is inside a code block, let the default paste handler
+    // insert the raw URL instead of wrapping it in a markdown link.
+    if (!this.settings.enhanceInsideCodeBlocks && CheckIf.isInsideCodeBlock(editor)) {
       return;
     }
 
@@ -216,6 +227,13 @@ export default class AutoLinkTitle extends Plugin {
     if (!CheckIf.isUrl(dropText) || CheckIf.isImage(dropText)) {
       return;
     }
+
+    // If the cursor is inside a code block, let the default drop handler
+    // insert the raw URL instead of wrapping it in a markdown link.
+    if (!this.settings.enhanceInsideCodeBlocks && CheckIf.isInsideCodeBlock(editor)) {
+      return;
+    }
+
     // Only attempt fetch if online
     if (!navigator.onLine) {
       new Notice("No internet connection. Cannot fetch title.");

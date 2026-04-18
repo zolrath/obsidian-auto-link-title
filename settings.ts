@@ -16,6 +16,7 @@ export interface AutoLinkTitleSettings {
   useNewScraper: boolean;
   linkPreviewApiKey: string;
   useBetterPasteId: boolean;
+  enhanceInsideCodeBlocks: boolean;
 }
 
 export const DEFAULT_SETTINGS: AutoLinkTitleSettings = {
@@ -36,6 +37,7 @@ export const DEFAULT_SETTINGS: AutoLinkTitleSettings = {
   useNewScraper: false,
   linkPreviewApiKey: "",
   useBetterPasteId: false,
+  enhanceInsideCodeBlocks: false,
 };
 
 export class AutoLinkTitleSettingTab extends PluginSettingTab {
@@ -77,6 +79,20 @@ export class AutoLinkTitleSettingTab extends PluginSettingTab {
           .onChange(async (value) => {
             console.log(value);
             this.plugin.settings.enhanceDropEvents = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Enhance inside code blocks")
+      .setDesc(
+        "When disabled, pasting a URL inside a fenced or inline code block leaves it as raw text instead of wrapping it in a markdown link."
+      )
+      .addToggle((val) =>
+        val
+          .setValue(this.plugin.settings.enhanceInsideCodeBlocks)
+          .onChange(async (value) => {
+            this.plugin.settings.enhanceInsideCodeBlocks = value;
             await this.plugin.saveSettings();
           })
       );
