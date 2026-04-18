@@ -258,8 +258,7 @@ export default class AutoLinkTitle extends Plugin {
 
   async convertUrlToTitledLink(editor: Editor, url: string): Promise<void> {
     if (await this.isBlacklisted(url)) {
-      let domain = new URL(url).hostname;
-      editor.replaceSelection(`[${domain}](${url})`);
+      editor.replaceSelection(url);
       return;
     }
 
