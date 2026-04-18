@@ -33,8 +33,15 @@ export class CheckIf {
   }
 
   public static isImage(text: string): boolean {
+    // Match the extension only against the URL's pathname, not the full URL.
+    // Otherwise a bare domain on an image-like TLD (e.g. https://openclaw.ai
+    // for the ".ai" Adobe Illustrator extension) is misclassified as an image.
     let imageRegex = new RegExp(DEFAULT_SETTINGS.imageRegex);
-    return imageRegex.test(text);
+    try {
+      return imageRegex.test(new URL(text).pathname);
+    } catch {
+      return imageRegex.test(text);
+    }
   }
 
   public static isLinkedUrl(text: string): boolean {
